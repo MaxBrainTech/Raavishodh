@@ -8,6 +8,7 @@ import TextToImageDiffusion from './src/screens/TextToImageDiffusion'
 import BackgroundRemoval from './src/screens/BackgroundRemoval'
 import FaceToImage from './src/screens/FaceToImage'
 import SuperResolution from './src/screens/SuperResolution'
+import GhiblifyScreen from "./src/screens/GhiblifyScreen"; 
 
 const Stack = createStackNavigator();
 
@@ -42,6 +43,10 @@ export default function App() {
 
     <Stack.Screen
     name='SuperResolution' component={SuperResolution}
+    options={{ headerShown: false}} />
+
+    <Stack.Screen
+    name="GhiblifyScreen" component ={GhiblifyScreen}
     options={{ headerShown: false}} />
 
  </Stack.Navigator>
