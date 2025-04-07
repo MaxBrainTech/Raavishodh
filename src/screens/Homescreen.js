@@ -213,6 +213,27 @@ const Homescreen = ({navigation}) => {
             </View>
             </Card>
             </TouchableOpacity>
+
+            { /* BwColourization Screen */}
+            <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={() => navigation.navigate("BwColourization")}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}>
+       <Card style={styles.card}>
+       <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
+              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
+              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
+              B & W Colorization
+              </Text>
+            </View>
+            <View style={{ width: 250, marginTop: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
+              Bring black & white photos to life with colors.
+              </Text>
+            </View>
+            </Card>
+            </TouchableOpacity>
             
       </ScrollView>
     </View>

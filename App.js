@@ -9,6 +9,7 @@ import BackgroundRemoval from './src/screens/BackgroundRemoval'
 import FaceToImage from './src/screens/FaceToImage'
 import SuperResolution from './src/screens/SuperResolution'
 import GhiblifyScreen from "./src/screens/GhiblifyScreen"; 
+import BwColourization from "./src/screens/BwColourization"; 
 
 const Stack = createStackNavigator();
 
@@ -47,6 +48,10 @@ export default function App() {
 
     <Stack.Screen
     name="GhiblifyScreen" component ={GhiblifyScreen}
+    options={{ headerShown: false}} />
+
+    <Stack.Screen
+    name="BwColourization" component ={BwColourization}
     options={{ headerShown: false}} />
 
  </Stack.Navigator>

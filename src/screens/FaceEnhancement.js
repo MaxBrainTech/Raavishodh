@@ -15,7 +15,7 @@ import { launchImageLibrary, launchCamera } from "react-native-image-picker";
 import { request, PERMISSIONS } from "react-native-permissions";
 import FeatureLayout from "../component/FeatureLayout";
 import TutorialCarousel from "../component/TutorialCarousel";
-import RNFS from "react-native-fs"; // File System for Base64 conversion
+import RNFS from "react-native-fs"; 
 import { REPLICATE_API_TOKEN } from '@env';
 
 export default function FaceEnhancement() {
