@@ -196,23 +196,68 @@ export default function FaceToImage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#5680E9", padding: 20 },
-  contentContainer: { flexGrow: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 24, fontWeight: "bold", color: "#fff", marginBottom: 10 },
-  description: { fontSize: 16, color: "#fff", marginBottom: 20 },
-  contentContainer: { alignItems: "center", justifyContent: "center" },
-  uploadedImage: { width: 250, height: 250, borderRadius: 10, resizeMode: "cover", marginBottom:20 },
-  processingText: { marginTop: 10, color: "#ffffff" },
-  tutorialContainer: { alignItems: "center", marginBottom: 20 },
-  tutorialText: { color: "#fff", textAlign: "center", marginBottom: 10 },
-  promptContainer: { width: "100%", marginVertical: 10 },
-  promptLabel: { color: "#fff", marginBottom: 5 },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#5680E9", 
+    padding: 20 
+  },
+  contentContainer: { 
+    flexGrow: 1,
+     alignItems: "center",
+     justifyContent: "center" 
+  },
+  title: { 
+    fontSize: 24,
+     fontWeight: "bold",
+     color: "#fff",
+     marginBottom: 10
+     },
+  description: {
+     fontSize: 16, 
+     color: "#fff",
+      marginBottom: 20 
+    },
+  contentContainer: {
+     alignItems: "center",
+      justifyContent: "center"
+     },
+  uploadedImage: {
+     width: 250,
+      height: 250, 
+      borderRadius: 10,
+       resizeMode: "cover",
+        marginBottom:20 
+      },
+  processingText: { 
+    marginTop: 10,
+     color: "#ffffff" 
+    },
+  tutorialContainer: {
+     alignItems: "center",
+      marginBottom: 20
+     },
+  tutorialText: {
+     color: "#fff", 
+     textAlign: "center", 
+     marginBottom: 10 
+    },
+  promptContainer: { 
+    width: "100%",
+     marginVertical: 10
+     },
+  promptLabel: {
+     color: "#fff",
+      marginBottom: 5 
+    },
   promptInput: {
     backgroundColor: "#fff",
     borderRadius: 5,
     padding: 10,
     width: "100%",
   },
-  processingContainer: { alignItems: "center", marginTop: 10 },
+  processingContainer: {
+     alignItems: "center",
+      marginTop: 10 
+    },
 });
 

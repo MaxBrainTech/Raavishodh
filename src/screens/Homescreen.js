@@ -12,8 +12,8 @@ import {
 import { Card } from "react-native-paper"; // Optional for styled card UI
 
 
-const Homescreen = ({navigation}) => {
-  
+const Homescreen = ({ navigation }) => {
+
   console.log(navigation.getState()); // Debugging line
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -42,9 +42,9 @@ const Homescreen = ({navigation}) => {
           Start with our most popular feature.
         </Text>
         <TouchableOpacity style={styles.button}
-         onPress={() => navigation.navigate("FaceEnhancement")}>
+          onPress={() => navigation.navigate("FaceEnhancement")}>
           <Text style={styles.buttonText}>Try Face Enhancement</Text>
-         <Image source={require('../../assets/arrow-right.png')} />
+          <Image source={require('../../assets/arrow-right.png')} />
         </TouchableOpacity>
       </View>
 
@@ -59,78 +59,101 @@ const Homescreen = ({navigation}) => {
 
       {/* Face Enhancement Card */}
       <ScrollView showsVerticalScrollIndicator={false}>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => navigation.navigate("FaceEnhancement")}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-      >
-        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("FaceEnhancement")}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+        >
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <Card style={styles.card}>
+              <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
+                <Image source={require("../../assets/sparkles.png")} style={styles.image} />
+                <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
+                  Face Enhancement
+                </Text>
+              </View>
+
+              <View style={{ width: 250, marginTop: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: "normal" }}>
+                  Enhance facial features naturally using our advanced AI technology
+                </Text>
+              </View>
+            </Card>
+          </Animated.View>
+        </TouchableOpacity>
+
+        { /* Ghiblify Screen */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("GhiblifyScreen")}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}>
           <Card style={styles.card}>
             <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
               <Image source={require("../../assets/sparkles.png")} style={styles.image} />
               <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                Face Enhancement
+                Ghiblify Screen
               </Text>
             </View>
-
             <View style={{ width: 250, marginTop: 10 }}>
               <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                Enhance facial features naturally using our advanced AI technology
+                Transform your photos into stunning Ghibli-style artwork with the power of AI.
               </Text>
             </View>
           </Card>
-        </Animated.View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+
+        {/* Face to Make Images*/}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("FaceToImage")}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}>
+          <Card style={styles.card}>
+            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
+              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
+              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
+                Face To Make Images
+              </Text>
+            </View>
+            <View style={{ width: 250, marginTop: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
+                Make realistic images of people instantly.
+              </Text>
+            </View>
+          </Card>
+        </TouchableOpacity>
 
         {/* Text To Image Card */}
-<TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => navigation.navigate("TextToImage")}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-      >
-        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-          <Card style={styles.card}>
-            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                Text To Image
-              </Text>
-            </View>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("TextToImage")}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+        >
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <Card style={styles.card}>
+              <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
+                <Image source={require("../../assets/sparkles.png")} style={styles.image} />
+                <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
+                  Text To Image
+                </Text>
+              </View>
 
-            <View style={{ width: 250, marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                Create high quality images from text descriptions using our AI model.
-              </Text>
-            </View>
-          </Card>
-        </Animated.View>
-      </TouchableOpacity>
-
-      {/* Text to Image Diffusion */}
-      <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate("TextToImageDiffusion")}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}>
-       <Card style={styles.card}>
-       <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                Text To Image Diffusion
-              </Text>
-            </View>
-            <View style={{ width: 250, marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                Transform text descriptions into stunning AI- generated images using stable diffusion.
-              </Text>
-            </View>
+              <View style={{ width: 250, marginTop: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: "normal" }}>
+                  Create high quality images from text descriptions using our AI model.
+                </Text>
+              </View>
             </Card>
-            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
 
-            {/* Background Removal */}
-      <TouchableOpacity
+
+
+        {/* Background Removal */}
+        {/* <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => navigation.navigate("BackgroundRemoval")}
       onPressIn={handlePressIn}
@@ -148,93 +171,99 @@ const Homescreen = ({navigation}) => {
               </Text>
             </View>
             </Card>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
-             {/* Face to Make Images*/}
-      <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate("FaceToImage")}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}>
-       <Card style={styles.card}>
-       <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
+
+
+
+
+
+        { /* BwColourization Screen */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("BwColourization")}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}>
+          <Card style={styles.card}>
+            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
               <Image source={require("../../assets/sparkles.png")} style={styles.image} />
               <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                Face To Make Images
+                B & W Colorization
               </Text>
             </View>
             <View style={{ width: 250, marginTop: 10 }}>
               <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-               Make realistic images of people instantly.
+                Bring black & white photos to life with colors.
               </Text>
             </View>
-            </Card>
-            </TouchableOpacity>
+          </Card>
+        </TouchableOpacity>
 
-            { /* Super Resolution */}
-            <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate("SuperResolution")}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}>
-       <Card style={styles.card}>
-       <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
+
+        { /* Super Resolution */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("SuperResolution")}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}>
+          <Card style={styles.card}>
+            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
               <Image source={require("../../assets/sparkles.png")} style={styles.image} />
               <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-              AI Super Resolution
+                AI Super Resolution
               </Text>
             </View>
             <View style={{ width: 250, marginTop: 10 }}>
               <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-              Enhance image quality and resolution using advanced AI upscaling.
-               Transform low-resolution images into crisp, detailed photos.
+                Enhance image quality and resolution using advanced AI upscaling.
+                Transform low-resolution images into crisp, detailed photos.
               </Text>
             </View>
-            </Card>
-            </TouchableOpacity>
+          </Card>
+        </TouchableOpacity>
 
-            { /* Ghiblify Screen */}
-            <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate("GhiblifyScreen")}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}>
-       <Card style={styles.card}>
-       <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
+        {/* Text to Image Diffusion */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("TextToImageDiffusion")}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}>
+          <Card style={styles.card}>
+            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
               <Image source={require("../../assets/sparkles.png")} style={styles.image} />
               <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-              Ghiblify Screen
+                Text To Image Diffusion
               </Text>
             </View>
             <View style={{ width: 250, marginTop: 10 }}>
               <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-              Transform your photos into stunning Ghibli-style artwork with the power of AI.
+                Transform text descriptions into stunning AI- generated images using stable diffusion.
               </Text>
             </View>
-            </Card>
-            </TouchableOpacity>
+          </Card>
+        </TouchableOpacity>
 
-            { /* BwColourization Screen */}
-            <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate("BwColourization")}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}>
-       <Card style={styles.card}>
-       <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
+          {/* Text to Image Diffusion */}
+          <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("PhotoRestoration")}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}>
+          <Card style={styles.card}>
+            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
               <Image source={require("../../assets/sparkles.png")} style={styles.image} />
               <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-              B & W Colorization
+              Photo Restoration
               </Text>
             </View>
             <View style={{ width: 250, marginTop: 10 }}>
               <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-              Bring black & white photos to life with colors.
+                Transform text descriptions into stunning AI- generated images using stable diffusion.
               </Text>
             </View>
-            </Card>
-            </TouchableOpacity>
-            
+          </Card>
+        </TouchableOpacity>
+
       </ScrollView>
     </View>
   );
@@ -285,17 +314,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginRight: 5,
   },
-  card:{
+  card: {
     margin: 20,
     padding: 10,
     borderRadius: 10,
     backgroundColor: "#dae1f2",
-    borderColor:'#f21b2d',
-    borderWidth:1,
+    borderColor: '#f21b2d',
+    borderWidth: 1,
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    alignItems:'center'
+    alignItems: 'center'
   },
 });
 

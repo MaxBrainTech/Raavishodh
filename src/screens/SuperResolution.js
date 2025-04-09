@@ -177,7 +177,7 @@ export default function FaceEnhancement() {
               {
                 title: "Upload Your Image",
                 description:
-                  "Click on button to select.\nMax file size: 10MB.\nSupported formats: JPEG, PNG, WebP.",
+                  "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
               },
             ]}
             keyExtractor={(_, index) => index.toString()}

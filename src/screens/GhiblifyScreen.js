@@ -15,8 +15,18 @@ import axios from "axios";
 import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from "@env";
 
+const tutorialSteps = [
+  {
+    title: "Upload Your Image",
+    description:
+    "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+  }
+];
+
 export default function GhiblifyScreen() {
+  const [showTutorial, setShowTutorial] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+   const [image, setImage] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [ghibliImage, setGhibliImage] = useState(null);
 
@@ -151,6 +161,13 @@ export default function GhiblifyScreen() {
           Transform your photos into stunning Ghibli-style artwork with AI.
         </Text>
 
+         {!image && showTutorial && (
+                    <View style={styles.tutorialContainer}>
+                      <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+                      <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+                    </View>
+                  )}
+
         {!selectedImage ? (
           <Button title="Upload Image" onPress={openImagePicker} color="blue" />
         ) : (
@@ -208,7 +225,7 @@ export default function GhiblifyScreen() {
 
 const styles = StyleSheet.create({
     scrollContainer: { 
-    //   flex: 1 
+      flex: 1 
   },
     container: {
       flex: 1,
@@ -217,11 +234,35 @@ const styles = StyleSheet.create({
       alignItems: "center",
     },
     title: {
-       fontSize: 24,
-        fontWeight: "bold",
-        color: "#fff",
-        marginBottom: 10 
-      },
+      color: "#fff",
+      fontSize: 24,
+      fontWeight: "bold",
+      marginBottom: 20,
+    },
+    subtitle: {
+      color: "#fff",
+      fontSize: 16,
+      textAlign: 'center',
+      marginBottom: 20,
+    },
+    tutorialContainer: {
+      backgroundColor: "#fff",
+      padding: 15,
+      borderRadius: 10,
+      marginBottom: 20,
+      alignItems: "center",
+    },
+    tutorialTitle: {
+      color: "black",
+      fontSize: 18,
+      fontWeight: "bold",
+      marginBottom: 5,
+    },
+    tutorialText: {
+      color: "black",
+      fontSize: 14,
+    },
+  
     uploadedImage: {
       width: 250,
       height: 250,

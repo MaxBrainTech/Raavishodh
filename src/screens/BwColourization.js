@@ -10,7 +10,8 @@ import { REPLICATE_API_TOKEN } from '@env';
 const tutorialSteps = [
   {
     title: "Upload Your Image",
-    description: "Click on the button below to select an image.\nMax file size: 10MB.\nSupported formats: JPEG, PNG, WebP.",
+    description:
+    "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
   }
 ];
 
