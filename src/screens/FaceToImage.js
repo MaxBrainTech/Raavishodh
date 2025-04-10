@@ -7,16 +7,22 @@ import {
   TextInput,
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Alert,
+  ScrollView,
 } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import RNFS from "react-native-fs";
 import axios from "axios";
 import { REPLICATE_API_TOKEN } from "@env";
-import { ScrollView } from "react-native-gesture-handler";
+
+const tutorialSteps = [
+  {
+    title: "Upload Your Image",
+    description:
+      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+  },
+];
 
 export default function FaceToImage() {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -42,12 +48,11 @@ export default function FaceToImage() {
       Alert.alert("Error", "Please select an image first!");
       return;
     }
-  
+
     setProcessing(true);
     try {
-      // Convert image to Base64
       const base64Image = await RNFS.readFile(selectedImage, "base64");
-  
+
       const response = await axios.post(
         "https://api.replicate.com/v1/predictions",
         {
@@ -76,10 +81,10 @@ export default function FaceToImage() {
           },
         }
       );
-  
+
       let prediction = response.data;
       if (prediction?.error) throw new Error(prediction.error);
-  
+
       // Polling for processing status
       while (
         prediction.status === "starting" ||
@@ -92,11 +97,10 @@ export default function FaceToImage() {
         );
         prediction = checkResponse.data;
       }
-  
+
       if (prediction.status === "succeeded") {
-        // Fix: Handle array response
         if (Array.isArray(prediction.output) && prediction.output.length > 0) {
-          setEnhancedImage(prediction.output); 
+          setEnhancedImage(prediction.output);
         } else {
           throw new Error("Invalid API response format");
         }
@@ -109,37 +113,25 @@ export default function FaceToImage() {
     }
     setProcessing(false);
   };
-  
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <Text style={styles.title}>Use a Face to Generate Images</Text>
-      <Text style={styles.description}>
-        Make realistic images of people instantly.
-      </Text>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Face To Make Image</Text>
+        <Text style={styles.subtitle}>
+          Make realistic images of people instantly.
+        </Text>
 
-      <View style={styles.contentContainer}>
         {!selectedImage && showTutorial && (
-          <FlatList  
-            data={[
-              {
-                title: "Upload Your Image",
-                description:
-                  "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
-              },
-            ]}
-            keyExtractor={(_, index) => index.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.tutorialContainer}>
-                <Text style={styles.tutorialText}>{item.description}</Text>
-                <Button title="Upload Image" onPress={openImagePicker} color="blue" />
-              </View>
-            )}
-          />
+          <View style={styles.tutorialContainer}>
+            <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+            <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+          </View>
+        )}
+
+        {/* Only show upload button if no image is selected */}
+        {!selectedImage && (
+          <Button title="Upload Image" onPress={openImagePicker} color="blue" />
         )}
 
         {/* Show uploaded image */}
@@ -167,7 +159,6 @@ export default function FaceToImage() {
               <Button title="Generate" onPress={processImage} color="blue" />
             )}
 
-            {/* Show processing state */}
             {processing && (
               <View style={styles.processingContainer}>
                 <ActivityIndicator size="large" color="#ffffff" />
@@ -175,89 +166,96 @@ export default function FaceToImage() {
               </View>
             )}
 
-           {/* Show enhanced images */}
-{enhancedImage && Array.isArray(enhancedImage) && (
-  <FlatList 
-    data={enhancedImage} // Use all images
-    keyExtractor={(_, index) => index.toString()}
-    renderItem={({ item }) => (
-      <View style={styles.imageWrapper}>
-        <Image source={{ uri: item }} style={styles.uploadedImage} />
-      </View>
-    )}
-  />
-)}
+            {enhancedImage && Array.isArray(enhancedImage) && (
+              <FlatList
+                data={enhancedImage}
+                keyExtractor={(_, index) => index.toString()}
+                renderItem={({ item }) => (
+                  <View style={styles.imageWrapper}>
+                    <Image source={{ uri: item }} style={styles.uploadedImage} />
+                  </View>
+                )}
+                scrollEnabled={false}
+              />
+            )}
           </>
         )}
       </View>
-    </KeyboardAvoidingView>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#5680E9", 
-    padding: 20 
-  },
-  contentContainer: { 
+  scrollContainer: {
     flexGrow: 1,
-     alignItems: "center",
-     justifyContent: "center" 
   },
-  title: { 
+  container: {
+    flex: 1,
+    backgroundColor: "#5680e9",
+    padding: 20,
+    alignItems: "center",
+  },
+  title: {
+    color: "#fff",
     fontSize: 24,
-     fontWeight: "bold",
-     color: "#fff",
-     marginBottom: 10
-     },
-  description: {
-     fontSize: 16, 
-     color: "#fff",
-      marginBottom: 20 
-    },
-  contentContainer: {
-     alignItems: "center",
-      justifyContent: "center"
-     },
-  uploadedImage: {
-     width: 250,
-      height: 250, 
-      borderRadius: 10,
-       resizeMode: "cover",
-        marginBottom:20 
-      },
-  processingText: { 
-    marginTop: 10,
-     color: "#ffffff" 
-    },
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  subtitle: {
+    color: "#fff",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+  },
   tutorialContainer: {
-     alignItems: "center",
-      marginBottom: 20
-     },
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  tutorialTitle: {
+    color: "black",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
   tutorialText: {
-     color: "#fff", 
-     textAlign: "center", 
-     marginBottom: 10 
-    },
-  promptContainer: { 
+    color: "black",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  uploadedImage: {
+    width: 250,
+    height: 250,
+    borderRadius: 10,
+    resizeMode: "cover",
+    marginBottom: 20,
+  },
+  processingText: {
+    marginTop: 10,
+    color: "#ffffff",
+  },
+  promptContainer: {
     width: "100%",
-     marginVertical: 10
-     },
+    marginVertical: 10,
+  },
   promptLabel: {
-     color: "#fff",
-      marginBottom: 5 
-    },
+    color: "#fff",
+    marginBottom: 5,
+  },
   promptInput: {
     backgroundColor: "#fff",
     borderRadius: 5,
     padding: 10,
-    width: "100%",
+    color: "#000",
   },
   processingContainer: {
-     alignItems: "center",
-      marginTop: 10 
-    },
+    marginTop: 20,
+    alignItems: "center",
+  },
+  imageWrapper: {
+    marginVertical: 10,
+    alignItems: "center",
+  },
 });
-
