@@ -21,7 +21,7 @@ import PrivacySetting from "./src/screens/PrivacySetting";
 import Terms from "./src/screens/Terms"; 
 import Cookies from "./src/screens/Cookies"; 
 import Faq from "./src/screens/Faq"; 
-// import PhotoRestoration from "./src/screens/PhotoRestoration"; 
+import PhotoRestoration from "./src/screens/PhotoRestoration"; 
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -78,9 +78,9 @@ function HomeStack() {
     name="BwColourization" component ={BwColourization}
     options={{ headerShown: false}} />
 
-    {/* <Stack.Screen
+    <Stack.Screen
     name="PhotoRestoration" component ={PhotoRestoration}
-    options={{ headerShown: false}} /> */}
+    options={{ headerShown: false}} />
 
     
 
