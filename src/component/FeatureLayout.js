@@ -13,7 +13,8 @@ const FeatureLayout = ({ title, description }) => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-  //  flex:1
+    alignItems:"center",
+
   },
   title: {
     fontSize: 24,
@@ -24,6 +25,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 5,
     color: "white",
+    
   },
 });
 

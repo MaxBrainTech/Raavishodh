@@ -8,13 +8,16 @@ import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
-  Alert,
+  Alert,Modal,TouchableOpacity,
   ScrollView,
 } from "react-native";
+import FastImage from 'react-native-fast-image';
 import { launchImageLibrary } from "react-native-image-picker";
+import FeatureLayout from "../component/FeatureLayout";
 import RNFS from "react-native-fs";
 import axios from "axios";
 import { REPLICATE_API_TOKEN } from "@env";
+import LinearGradient from "react-native-linear-gradient";
 
 const tutorialSteps = [
   {
@@ -30,6 +33,7 @@ export default function FaceToImage() {
   const [prompt, setPrompt] = useState("");
   const [processing, setProcessing] = useState(false);
   const [enhancedImage, setEnhancedImage] = useState(null);
+  const [isModalVisible, setModalVisible] = useState(true);
 
   // Open image picker
   const openImagePicker = async () => {
@@ -113,14 +117,55 @@ export default function FaceToImage() {
     }
     setProcessing(false);
   };
-
+  const downloadImage = async (imageUrl) => {
+    try {
+      const fileName = `enhanced_${Date.now()}.jpg`; // you can also get extension dynamically if needed
+      const downloadDest = `${RNFS.DownloadDirectoryPath}/${fileName}`;
+      
+      const { promise } = RNFS.downloadFile({
+        fromUrl: imageUrl,
+        toFile: downloadDest,
+      });
+  
+      await promise;
+  
+      Alert.alert("Success", "Image downloaded successfully to Downloads folder!");
+    } catch (error) {
+      console.error("Download error:", error);
+      Alert.alert("Error", "Failed to download image.");
+    }
+  };
+  
   return (
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
-        <Text style={styles.title}>Face To Make Image</Text>
-        <Text style={styles.subtitle}>
-          Make realistic images of people instantly.
-        </Text>
+      <Modal
+  animationType="slide"
+  transparent={true}
+  visible={isModalVisible}
+  onRequestClose={() => setModalVisible(false)}
+  
+>
+        <View style={styles.modalOverlay}>
+    <View style={styles.modalContentContainer}>
+      <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+        <Text style={styles.closeButtonText}>X</Text>
+      </TouchableOpacity>
+
+      <FastImage
+        source={require("../../assets/gif/FacetoImage.gif")}
+        style={styles.gif}
+        resizeMode={FastImage.resizeMode.contain}
+      />
+    </View>
+  </View>
+      </Modal>
+      <FeatureLayout
+          title="Face To Make Image"
+          description="Make Realistic Images Of People Instantly."
+          operationId="face-enhancement"
+        />
 
         {!selectedImage && showTutorial && (
           <View style={styles.tutorialContainer}>
@@ -131,7 +176,13 @@ export default function FaceToImage() {
 
         {/* Only show upload button if no image is selected */}
         {!selectedImage && (
-          <Button title="Upload Image" onPress={openImagePicker} color="blue" />
+           <TouchableOpacity
+                                style={styles.button}
+                                onPress={openImagePicker}
+                              >
+                                <Text style={styles.buttonText}>Upload Image</Text>
+                               
+                              </TouchableOpacity>
         )}
 
         {/* Show uploaded image */}
@@ -173,6 +224,12 @@ export default function FaceToImage() {
                 renderItem={({ item }) => (
                   <View style={styles.imageWrapper}>
                     <Image source={{ uri: item }} style={styles.uploadedImage} />
+                    <TouchableOpacity
+          style={styles.button}
+          onPress={() => downloadImage(item)}
+        >
+          <Text style={styles.buttonText}>Download</Text>
+        </TouchableOpacity>
                   </View>
                 )}
                 scrollEnabled={false}
@@ -182,18 +239,59 @@ export default function FaceToImage() {
         )}
       </View>
     </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   scrollContainer: {
-    flexGrow: 1,
+    // flexGrow: 1,
   },
   container: {
     flex: 1,
-    backgroundColor: "#5680e9",
     padding: 20,
     alignItems: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(70, 71, 77, 0.85)', // Dark transparent background
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContentContainer: {
+    // width: '85%',
+    // backgroundColor: '#fff',
+    // borderRadius: 20,
+    // padding: 20,
+    alignItems: 'center',
+    position: 'relative',
+    // elevation: 5, 
+    shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#000',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    zIndex: 10,
+  },
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  gif: {
+    width: 250,
+    height: 250,
+    marginTop: 30,
   },
   title: {
     color: "#fff",
@@ -223,7 +321,7 @@ const styles = StyleSheet.create({
   tutorialText: {
     color: "black",
     fontSize: 14,
-    textAlign: "center",
+    textAlign: "left",
   },
   uploadedImage: {
     width: 250,
@@ -257,5 +355,23 @@ const styles = StyleSheet.create({
   imageWrapper: {
     marginVertical: 10,
     alignItems: "center",
+  },
+  button: {
+    flexDirection: "row",
+    backgroundColor: "#6a11cb",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+    marginRight: 8,
   },
 });

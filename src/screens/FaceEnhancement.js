@@ -7,22 +7,32 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  Text,
-  FlatList,
+  Text,Modal,
+  FlatList,TouchableOpacity,
   KeyboardAvoidingView,
 } from "react-native";
+import FastImage from 'react-native-fast-image';
 import { launchImageLibrary, launchCamera } from "react-native-image-picker";
 import { request, PERMISSIONS } from "react-native-permissions";
 import FeatureLayout from "../component/FeatureLayout";
-import TutorialCarousel from "../component/TutorialCarousel";
 import RNFS from "react-native-fs"; 
 import { REPLICATE_API_TOKEN } from '@env';
+import LinearGradient from "react-native-linear-gradient";
 
 export default function FaceEnhancement() {
   const [showTutorial, setShowTutorial] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [enhancedImage, setEnhancedImage] = useState(null);
   const [processing, setProcessing] = useState(false);
+const [isModalVisible, setModalVisible] = useState(true);
+
+const tutorialSteps = [
+  {
+    title: "Upload Your Image",
+    description:
+      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+  },
+];
 
   const requestPermissions = async () => {
     if (Platform.OS === "android") {
@@ -157,32 +167,47 @@ export default function FaceEnhancement() {
 
 
   return (
+     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <KeyboardAvoidingView style={styles.container} behavior="padding">
-     
+    <FlatList
+        data={[{}]} // dummy data to trigger FlatList
+        keyExtractor={(_, index) => index.toString()}
+        renderItem={() => (
       <View style={{ alignItems: "center", justifyContent: "center"  }}>
+
+      <Modal
+  animationType="slide"
+  transparent={true}
+  visible={isModalVisible}
+  onRequestClose={() => setModalVisible(false)}
+  
+>
+        <View style={styles.modalOverlay}>
+    <View style={styles.modalContentContainer}>
+      <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+        <Text style={styles.closeButtonText}>X</Text>
+      </TouchableOpacity>
+
+      <FastImage
+        source={require("../../assets/gif/face_enhancement_tool-gif.gif")}
+        style={styles.gif}
+        resizeMode={FastImage.resizeMode.contain}
+      />
+    </View>
+  </View>
+      </Modal>
         <FeatureLayout
           title="AI Face Enhancement"
           description="Enhance facial features using our advanced AI technology."
           operationId="face-enhancement"
         />
 
-        {!selectedImage && showTutorial && (
-          <FlatList
-            // nestedScrollEnabled={true}
-            data={[{
-              title: "Upload Your Image",
-              description: 
-             "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
-            }]}
-            keyExtractor={(_, index) => index.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.tutorialContainer}>
-                <TutorialCarousel steps={[item]} onClose={() => setShowTutorial(false)} />
-              </View>
-            )}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+         {!selectedImage && showTutorial && (
+                  <View style={styles.tutorialContainer}>
+                    <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+                    <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+                  </View>
+                )}
 
          {/* Display the uploaded image */}
          {selectedImage && (
@@ -206,33 +231,100 @@ export default function FaceEnhancement() {
     <View style={styles.imageWrapper}>
       <Text style={styles.imageLabel}>After</Text>
       <Image source={{ uri: enhancedImage }} style={styles.uploadedImage} />
-      <View style={styles.buttonContainer}>
-        <Button title="Download Image"
-         onPress={downloadImage}
-          color="blue" />
-      </View>
+        <TouchableOpacity
+                       style={styles.button}
+                       onPress={downloadImage}
+                     >
+                       <Text style={styles.buttonText}>Download Image</Text>
+                      
+                     </TouchableOpacity>
     </View>
   )}
 
           {/* Show Upload button only if no image is selected */}
           {!selectedImage && !processing && (
-            <View style={styles.buttonContainer}>
-              <Button title="Upload Image" 
-              onPress={openImagePicker} 
-              color="blue" />
-            </View>
+           <TouchableOpacity
+                       style={styles.button}
+                       onPress={openImagePicker}
+                     >
+                       <Text style={styles.buttonText}>Upload Image</Text>
+                      
+                     </TouchableOpacity>
           )}
       </View>
-     
+        )}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+/>
     </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    padding: 5,
-    backgroundColor: "#5680E9",
+    alignItems: "center",
+  },
+  tutorialContainer: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  tutorialTitle: {
+    color: "black",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
+  tutorialText: {
+    color: "black",
+    fontSize: 14,
+    textAlign: "left",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(70, 71, 77, 0.85)', // Dark transparent background
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContentContainer: {
+    // width: '85%',
+    // backgroundColor: '#fff',
+    // borderRadius: 20,
+    // padding: 20,
+    alignItems: 'center',
+    position: 'relative',
+    // elevation: 5, 
+    shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#000',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    zIndex: 10,
+  },
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  gif: {
+    width: 250,
+    height: 250,
+    marginTop: 30,
   },
   imageWrapper: {
     alignItems: "center",
@@ -249,14 +341,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginVertical: 10,
   },
-  tutorialContainer: {
-    marginBottom: 10,
-    alignItems: "center",
-  },
+ 
   uploadedImage: {
     width: 200,
     height: 200,
-    marginTop: 30,
+    marginTop: 0,
+    marginBottom:30,
     borderRadius: 10,
     resizeMode: "cover",
   },
@@ -269,10 +359,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 5,
   },
-  buttonContainer: {
-    marginTop: 20,
-    marginBottom: 20,
-    width: "50%",
+  button: {
+    flexDirection: "row",
+    backgroundColor: "#6a11cb",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
     alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+    marginRight: 8,
   },
 });

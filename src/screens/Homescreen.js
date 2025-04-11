@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,16 +7,73 @@ import {
   StyleSheet,
   Image,
   Animated,
+  ActivityIndicator,
 } from "react-native";
-// import { useNavigation } from "@react-navigation/native";
-import { Card } from "react-native-paper"; // Optional for styled card UI
+import { Card } from "react-native-paper";
+import LinearGradient from "react-native-linear-gradient";
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
+
+const features = [
+  {
+    title: "Face Enhancement",
+    description: "Enhance facial features naturally using our advanced AI technology.",
+    screen: "FaceEnhancement",
+    icon: "scan-circle-outline",
+  },
+  {
+    title: "Ghiblify Screen",
+    description: "Transform your photos into stunning Ghibli-style artwork with the power of AI.",
+    screen: "GhiblifyScreen",
+    icon:"accessibility-outline"
+  },
+  {
+    title: "Face To Make Images",
+    description: "Make realistic images of people instantly.",
+    screen: "FaceToImage",
+    icon:"images-outline"
+  },
+  {
+    title: "Text To Image",
+    description: "Create high quality images from text descriptions using our AI model.",
+    screen: "TextToImage",
+    icon: "color-wand-outline",
+  },
+  {
+    title: "B & W Colorization",
+    description: "Bring black & white photos to life with colors.",
+    screen: "BwColourization",
+    icon: "color-palette-outline"
+  },
+  {
+    title: "AI Super Resolution",
+    description: " Enhance image quality and resolution using advanced AI upscaling.Transform low-resolution images into crisp, detailed photos.",
+    screen: "SuperResolution",
+    icon:"scan-outline"
+  },
+  {
+    title: "Text To Image Diffusion",
+    description: "  Transform text descriptions into stunning AI- generated images using stable diffusion.",
+    screen: "TextToImageDiffusion",
+    icon:"image-outline"
+  },
+  {
+    title: "Photo Restoration",
+    description: "  Models that improve or restore images by deblurring, colorization, and removing noise.",
+    screen: "PhotoRestoration",
+    icon:"timer-outline"
+  },
+];
 
 const Homescreen = ({ navigation }) => {
-
-  console.log(navigation.getState()); // Debugging line
-
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -33,299 +90,163 @@ const Homescreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Hero Section */}
-      <View style={styles.hero}>
-        <Text style={styles.title}>Transform Your Images with AI Magic</Text>
-        <Text style={styles.subtitle}>
-          Experience professional face enhancement and image editing powered by AI.
-          Start with our most popular feature.
-        </Text>
-        <TouchableOpacity style={styles.button}
-          onPress={() => navigation.navigate("FaceEnhancement")}>
-          <Text style={styles.buttonText}>Try Face Enhancement</Text>
-          <Image source={require('../../assets/arrow-right.png')} />
-        </TouchableOpacity>
-      </View>
-
-      {/* AI Features Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Explore All AI Features</Text>
-        <Text style={styles.subtitle}>
-          From face enhancement to style transfer,
-          discover our complete suite of AI-powered editing tools
-        </Text>
-      </View>
-
-      {/* Face Enhancement Card */}
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate("FaceEnhancement")}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-        >
-          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            <Card style={styles.card}>
-              <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-                <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-                <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                  Face Enhancement
-                </Text>
-              </View>
-
-              <View style={{ width: 250, marginTop: 10 }}>
-                <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                  Enhance facial features naturally using our advanced AI technology
-                </Text>
-              </View>
-            </Card>
-          </Animated.View>
-        </TouchableOpacity>
-
-        { /* Ghiblify Screen */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate("GhiblifyScreen")}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}>
-          <Card style={styles.card}>
-            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                Ghiblify Screen
-              </Text>
-            </View>
-            <View style={{ width: 250, marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                Transform your photos into stunning Ghibli-style artwork with the power of AI.
-              </Text>
-            </View>
-          </Card>
-        </TouchableOpacity>
-
-        {/* Face to Make Images*/}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate("FaceToImage")}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}>
-          <Card style={styles.card}>
-            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                Face To Make Images
-              </Text>
-            </View>
-            <View style={{ width: 250, marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                Make realistic images of people instantly.
-              </Text>
-            </View>
-          </Card>
-        </TouchableOpacity>
-
-        {/* Text To Image Card */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate("TextToImage")}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-        >
-          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            <Card style={styles.card}>
-              <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-                <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-                <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                  Text To Image
-                </Text>
-              </View>
-
-              <View style={{ width: 250, marginTop: 10 }}>
-                <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                  Create high quality images from text descriptions using our AI model.
-                </Text>
-              </View>
-            </Card>
-          </Animated.View>
-        </TouchableOpacity>
-
-
-
-        {/* Background Removal */}
-        {/* <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate("BackgroundRemoval")}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}>
-       <Card style={styles.card}>
-       <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                Background Removal
-              </Text>
-            </View>
-            <View style={{ width: 250, marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-               Extract subjects with perfect edge detection.
-              </Text>
-            </View>
-            </Card>
-            </TouchableOpacity> */}
-
-
-
-
-
-
-        { /* BwColourization Screen */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate("BwColourization")}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}>
-          <Card style={styles.card}>
-            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                B & W Colorization
-              </Text>
-            </View>
-            <View style={{ width: 250, marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                Bring black & white photos to life with colors.
-              </Text>
-            </View>
-          </Card>
-        </TouchableOpacity>
-
-
-        { /* Super Resolution */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate("SuperResolution")}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}>
-          <Card style={styles.card}>
-            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                AI Super Resolution
-              </Text>
-            </View>
-            <View style={{ width: 250, marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                Enhance image quality and resolution using advanced AI upscaling.
-                Transform low-resolution images into crisp, detailed photos.
-              </Text>
-            </View>
-          </Card>
-        </TouchableOpacity>
-
-        {/* Text to Image Diffusion */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate("TextToImageDiffusion")}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}>
-          <Card style={styles.card}>
-            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-                Text To Image Diffusion
-              </Text>
-            </View>
-            <View style={{ width: 250, marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                Transform text descriptions into stunning AI- generated images using stable diffusion.
-              </Text>
-            </View>
-          </Card>
-        </TouchableOpacity>
-
-          {/* Text to Image Diffusion */}
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.scrollContainer}
+      >
+        {/* Hero Section */}
+        <View style={styles.hero}>
+          <Text style={styles.title}>Transform Your Images with AI Magic</Text>
+          <Text style={styles.subtitle}>
+            Experience professional face enhancement and image editing powered by AI.
+          </Text>
           <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate("PhotoRestoration")}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}>
-          <Card style={styles.card}>
-            <View style={{ flexDirection: "row", alignSelf: "flex-start", alignItems: "center" }}>
-              <Image source={require("../../assets/sparkles.png")} style={styles.image} />
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 10 }}>
-              Photo Restoration
-              </Text>
-            </View>
-            <View style={{ width: 250, marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "normal" }}>
-                Transform text descriptions into stunning AI- generated images using stable diffusion.
-              </Text>
-            </View>
-          </Card>
-        </TouchableOpacity>
+            style={styles.button}
+            onPress={() => navigation.navigate("FaceEnhancement")}
+          >
+            <Text style={styles.buttonText}>Try Face Enhancement</Text>
+            <Image
+              source={require("../../assets/arrow-right.png")}
+              style={styles.arrowIcon}
+            />
+          </TouchableOpacity>
+        </View>
 
-      </ScrollView>
-    </View>
+        {/* Explore Features Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Explore All AI Features</Text>
+        </View>
+
+        {/* Cards Section */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#ffffff" />
+          </View>
+        ) : (
+          features.map((feature, index) => (
+            <TouchableOpacity
+              key={index}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate(feature.screen)}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+            >
+              <Animated.View style={[styles.cardContainer, { transform: [{ scale: scaleAnim }] }]}>
+                <Card style={styles.card}>
+                  <View style={styles.cardContent}>
+                  <Ionicons name={feature.icon} size={30} color="red" />
+                    <Text style={styles.cardTitle}>{feature.title}</Text>
+                  </View>
+                  <Text style={styles.cardDescription}>{feature.description}</Text>
+                </Card>
+              </Animated.View>
+            </TouchableOpacity>
+          ))
+        )}
+      </Animated.ScrollView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  gradient: {
     flex: 1,
-    backgroundColor: "#5680E9",
-    padding: 20,
+  },
+  scrollContainer: {
+    paddingBottom: 30,
   },
   hero: {
-    alignItems: "center",
+    padding: 20,
+    paddingTop: 60,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#eee",
     marginBottom: 20,
+  },
+  button: {
+    flexDirection: "row",
+    backgroundColor: "#6a11cb",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    alignItems: "center",
+    alignSelf: "flex-start",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+    marginRight: 8,
+  },
+  arrowIcon: {
+    width: 20,
+    height: 20,
+  },
+  section: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 10,
+  },
+  cardContainer: {
+    marginHorizontal: 20,
+    marginVertical: 10,
+  },
+  card: {
+    // backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: "rgba(13, 17, 23, 0.85)"
+,
+    borderWidth: 7,
+    borderColor: "#8c93fb",
+    borderRadius: 16,
+    padding: 20,
+    overflow: "hidden",
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+    marginLeft: 10,
+  },
+  cardDescription: {
+    fontSize: 14,
+    color: "#eee",
   },
   image: {
     width: 30,
     height: 30,
-    resizeMode: "contain",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#ddd",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-  },
-  button: {
-    flexDirection: "row",
-    backgroundColor: "red",
-    padding: 12,
-    borderRadius: 8,
+  loadingContainer: {
+    marginTop: 50,
     alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    marginRight: 5,
-  },
-  card: {
-    margin: 20,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: "#dae1f2",
-    borderColor: '#f21b2d',
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    alignItems: 'center'
   },
 });
 
 export default Homescreen;
+
