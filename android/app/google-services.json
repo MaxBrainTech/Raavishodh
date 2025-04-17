@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "63398816385",
+    "project_id": "airaavishodh",
+    "storage_bucket": "airaavishodh.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:63398816385:android:cc36d1d6f532969b8cfb80",
+        "android_client_info": {
+          "package_name": "com.aiapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBTebpoGO2OcDJ3uiX4vHy3moIQUB3WY0E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -22,6 +22,8 @@ import Terms from "./src/screens/Terms";
 import Cookies from "./src/screens/Cookies"; 
 import Faq from "./src/screens/Faq"; 
 import PhotoRestoration from "./src/screens/PhotoRestoration"; 
+import LoginScreen from "./src/screens/LoginScreen"; 
+import SignupScreen from "./src/screens/SignupScreen"; 
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -82,7 +84,13 @@ function HomeStack() {
     name="PhotoRestoration" component ={PhotoRestoration}
     options={{ headerShown: false}} />
 
-    
+    <Stack.Screen
+    name="Login" component ={LoginScreen}
+    options={{ headerShown: false}} />
+
+    <Stack.Screen
+    name="SignUp" component ={SignupScreen}
+    options={{ headerShown: false}} />
 
  </Stack.Navigator>
 
@@ -108,6 +116,8 @@ function ProfileStack() {
       <Stack.Screen name="Terms" component={Terms}  options={{headerShown: false}} />
       <Stack.Screen name="Cookies" component={Cookies}  options={{headerShown: false}} />
       <Stack.Screen name="Faq" component={Faq}  options={{headerShown: false}} />
+      <Stack.Screen name="Login" component={LoginScreen}  options={{headerShown: false}} />
+      <Stack.Screen name="Signup" component={SignupScreen}  options={{headerShown: false}} />
     </Stack.Navigator>
   );
 }

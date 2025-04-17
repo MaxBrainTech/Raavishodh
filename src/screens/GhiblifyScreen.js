@@ -7,10 +7,11 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  ScrollView,
+  ScrollView, TouchableOpacity,
   Platform,
 } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
+import LinearGradient from "react-native-linear-gradient";
 import axios from "axios";
 import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from "@env";
@@ -19,14 +20,14 @@ const tutorialSteps = [
   {
     title: "Upload Your Image",
     description:
-    "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
   }
 ];
 
-export default function GhiblifyScreen() {
+export default function GhiblifyScreen({ navigation }) {
   const [showTutorial, setShowTutorial] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
-   const [image, setImage] = useState(null);
+  const [image, setImage] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [ghibliImage, setGhibliImage] = useState(null);
 
@@ -154,6 +155,7 @@ export default function GhiblifyScreen() {
   };
 
   return (
+     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
         <Text style={styles.title}>Ghiblify Your Image</Text>
@@ -161,15 +163,18 @@ export default function GhiblifyScreen() {
           Transform your photos into stunning Ghibli-style artwork with AI.
         </Text>
 
-         {!image && showTutorial && (
-                    <View style={styles.tutorialContainer}>
-                      <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
-                      <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
-                    </View>
-                  )}
+        {!image && showTutorial && (
+          <View style={styles.tutorialContainer}>
+            <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+            <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+          </View>
+        )}
 
         {!selectedImage ? (
-          <Button title="Upload Image" onPress={openImagePicker} color="blue" />
+           <TouchableOpacity style={styles.button} onPress={openImagePicker}>
+           <Text style={styles.buttonText}> Upload Image</Text>
+         </TouchableOpacity>
+         
         ) : (
           <>
             {selectedImage && (
@@ -210,103 +215,124 @@ export default function GhiblifyScreen() {
                 Alert.alert("Error", "Could not load generated image.");
               }}
             />
-            <Button title="Download Image" 
-            onPress={downloadImage} 
-            color="blue"
-            marginBottom={20}
-             />
+        
+            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SignUp')}>
+              <Text style={styles.buttonText}> Download Image</Text>
+            </TouchableOpacity>
           </>
         )}
       </View>
     </ScrollView>
+    </LinearGradient>
   );
 }
 
 
 const styles = StyleSheet.create({
-    scrollContainer: { 
-      flex: 1 
+  gradient: {
+    flex: 1,
   },
-    container: {
-      flex: 1,
-      backgroundColor: "#5680e9",
-      padding: 20,
-      alignItems: "center",
-    },
-    title: {
-      color: "#fff",
-      fontSize: 24,
-      fontWeight: "bold",
-      marginBottom: 20,
-    },
-    subtitle: {
-      color: "#fff",
-      fontSize: 16,
-      textAlign: 'center',
-      marginBottom: 20,
-    },
-    tutorialContainer: {
-      backgroundColor: "#fff",
-      padding: 15,
-      borderRadius: 10,
-      marginBottom: 20,
-      alignItems: "center",
-    },
-    tutorialTitle: {
-      color: "black",
-      fontSize: 18,
-      fontWeight: "bold",
-      marginBottom: 5,
-    },
-    tutorialText: {
-      color: "black",
-      fontSize: 14,
-    },
-  
-    uploadedImage: {
-      width: 250,
-      height: 250,
-      borderRadius: 10,
-      resizeMode: "cover",
-      marginBottom: 20,
-    },
-    tutorialStep: {
-      backgroundColor: "#fff",
-      padding: 10,
-      borderRadius: 10,
-      marginBottom: 10,
-      width: "90%",
-    },
-    tutorialTitle: {
-      fontSize: 18,
-      fontWeight: "bold",
-      color: "black",
-      marginBottom: 5,
-    },
-    tutorialDescription: {
-      fontSize: 14,
-      color: "black",
-      textAlign: "left",
-    },
-    subtitle:{
-      fontSize:16,
-      color:"#fff",
-      marginBottom:20,
-      textAlign:'center'
-    },
-    processingText: {
-       marginTop: 10, 
-      color: "#ffffff" 
+  scrollContainer:{
+    flexGrow:1
   },
-    generatedImage: {
-      width: 250,
-      height: 250,
-      borderRadius: 10,
-      marginTop: 20,
-      marginBottom:20
-    },
-    processingContainer: { 
-      alignItems: "center",
-       marginTop: 10 
-      },
-  });
+  container: {
+    flex: 1,
+    padding: 20,
+    alignItems: "center",
+  },
+  title: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  subtitle: {
+    color: "#fff",
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  button: {
+    flexDirection: "row",
+    backgroundColor: "#6a11cb",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    alignItems: "center",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+    marginRight: 8,
+  },
+  tutorialContainer: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  tutorialTitle: {
+    color: "black",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
+  tutorialText: {
+    color: "black",
+    fontSize: 14,
+  },
+
+  uploadedImage: {
+    width: 250,
+    height: 250,
+    borderRadius: 10,
+    resizeMode: "cover",
+    marginBottom: 20,
+  },
+  tutorialStep: {
+    backgroundColor: "#fff",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+    width: "90%",
+  },
+  tutorialTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "black",
+    marginBottom: 5,
+  },
+  tutorialDescription: {
+    fontSize: 14,
+    color: "black",
+    textAlign: "left",
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#fff",
+    marginBottom: 20,
+    textAlign: 'center'
+  },
+  processingText: {
+    marginTop: 10,
+    color: "#ffffff"
+  },
+  generatedImage: {
+    width: 250,
+    height: 250,
+    borderRadius: 10,
+    marginTop: 20,
+    marginBottom: 20
+  },
+  processingContainer: {
+    alignItems: "center",
+    marginTop: 10
+  },
+});

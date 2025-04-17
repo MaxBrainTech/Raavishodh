@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
+import LinearGradient from "react-native-linear-gradient";
 
 
 export default function ProfileScreen() {
@@ -53,7 +54,8 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: isDarkMode ? '#000' : '#fff' }]}>
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Animated.View style={styles.profileContainer} entering={FadeInRight.duration(800)}>
         <TouchableOpacity onPress={isEditing ? pickImage : undefined}>
           <Image source={{ uri: avatar }} style={styles.avatar} />
@@ -99,8 +101,10 @@ export default function ProfileScreen() {
       </Animated.View>
 
       <View style={styles.optionsContainer}>
-        <OptionItem title="Change Password" icon="lock-closed-outline" isDarkMode={isDarkMode} />
-        <OptionItem title="Notifications" icon="notifications-outline" isDarkMode={isDarkMode} />
+        <OptionItem title="Change Password" 
+        icon="lock-closed-outline" isDarkMode={isDarkMode} />
+        <OptionItem title="Notifications" 
+        icon="notifications-outline" isDarkMode={isDarkMode} />
         <OptionItem title="Privacy Policy" 
         icon="shield-checkmark-outline" isDarkMode={isDarkMode}
         onPress={() => navigation.navigate('PrivacySetting')} />
@@ -113,17 +117,22 @@ export default function ProfileScreen() {
         <OptionItem title="Faq " 
         icon="shield-checkmark-outline" isDarkMode={isDarkMode}
         onPress={() => navigation.navigate('Faq')} />
+        {/* <OptionItem title="LogIn " 
+        icon="shield-checkmark-outline" isDarkMode={isDarkMode}
+        onPress={() => navigation.navigate('Login')} /> */}
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
     </ScrollView>
+    </LinearGradient>
   );
 }
 
 const OptionItem = ({ title, icon, isDarkMode, onPress }) => {
   return (
+    
     <Animated.View entering={FadeInRight.duration(500)}>
       <TouchableOpacity style={styles.optionItem} onPress={onPress}>
         <Ionicons
@@ -135,10 +144,14 @@ const OptionItem = ({ title, icon, isDarkMode, onPress }) => {
         <Text style={[styles.optionText, { color: isDarkMode ? '#fff' : '#000' }]}>{title}</Text>
       </TouchableOpacity>
     </Animated.View>
+  
   );
 };
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     padding: 20,
     flexGrow: 1,
@@ -221,7 +234,7 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     marginTop: 40,
-    backgroundColor: '#ff4d4d',
+    backgroundColor: '#6a11cb',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
