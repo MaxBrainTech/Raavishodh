@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image 
 } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import axios from "axios";
 import { REPLICATE_API_TOKEN } from '@env';
 
@@ -85,6 +86,7 @@ export default function TextToImage() {
   };
 
   return (
+     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <View style={styles.container}>
       <Text style={styles.title}>Text to Image Generation</Text>
       <Text style={styles.subtitle}>Generate amazing images from your text descriptions.</Text>
@@ -106,20 +108,23 @@ export default function TextToImage() {
       {loading && <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />}
       {imageUrl && <Image source={{ uri: imageUrl }} style={styles.generatedImage} />}
     </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#5680E9"
   },
   textcontainer: {
     padding: 10,
     backgroundColor: "white",
     borderRadius: 10,
-    marginBottom: 5
+    marginBottom: 10
   },
   title: {
     fontSize: 24,
@@ -145,15 +150,23 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   button: {
-    backgroundColor: "blue",
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 20
+    flexDirection: "row",
+    backgroundColor: "#6a11cb",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    alignItems: "center",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   buttonText: {
-    color: "white",
-    textAlign: "center",
-    fontWeight: "bold"
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+    marginRight: 8,
   },
   generatedImage: {
     width: 300,

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { 
   View, Text, Image, Button, StyleSheet, 
-  FlatList, ActivityIndicator, Alert 
+  FlatList, ActivityIndicator, Alert ,TouchableOpacity
 } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
+import LinearGradient from "react-native-linear-gradient";
 import RNFS from "react-native-fs"; 
 import { REPLICATE_API_TOKEN } from '@env';
 
@@ -133,8 +134,8 @@ export default function BwColourization() {
   };
 
   return (
+     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <FlatList
-      style={{ backgroundColor: "#5680E9" }}
       data={[]} 
       keyExtractor={(_, index) => index.toString()}
       ListHeaderComponent={
@@ -152,9 +153,9 @@ export default function BwColourization() {
           )}
 
           {!image && (
-            <View style={styles.button}>
-              <Button title="Upload Image" onPress={pickImage} color="blue" />
-            </View>
+           <TouchableOpacity style={styles.button} onPress={pickImage}>
+                      <Text style={styles.buttonText}> Upload Image</Text>
+                    </TouchableOpacity>
           )}
 
           {image && (
@@ -189,15 +190,19 @@ export default function BwColourization() {
         </View>
       }
     />
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     padding: 10,
     alignItems: "center",
-    backgroundColor: "#5680E9",
+
   },
   title: {
     color: "#fff",
@@ -237,8 +242,23 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   button: {
-    marginBottom: 20,
+    flexDirection: "row",
+    backgroundColor: "#6a11cb",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    alignItems: "center",
     alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+    marginRight: 8,
   },
   loader: {
     marginTop: 10,

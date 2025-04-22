@@ -8,11 +8,12 @@ import {
   Platform,
   ActivityIndicator,
   Text,
-  FlatList,
+  FlatList,TouchableOpacity,
   KeyboardAvoidingView,
 } from "react-native";
 import { launchImageLibrary, launchCamera } from "react-native-image-picker";
 import { request, PERMISSIONS } from "react-native-permissions";
+import LinearGradient from "react-native-linear-gradient";
 import FeatureLayout from "../component/FeatureLayout";
 import TutorialCarousel from "../component/TutorialCarousel";
 import RNFS from "react-native-fs"; // File System for Base64 conversion
@@ -163,6 +164,7 @@ export default function FaceEnhancement() {
   };
 
   return (
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <KeyboardAvoidingView style={styles.container} behavior="padding">
       <View style={{  alignItems: "center", justifyContent: "center" }}>
         <FeatureLayout
@@ -218,17 +220,54 @@ export default function FaceEnhancement() {
         )}
 
         {!selectedImage && !processing && (
-           <View style={[styles.buttonContainer, { marginTop: 20 }]}>
-            <Button title="Upload Image" onPress={openImagePicker} color="blue" />
-          </View>
+            <TouchableOpacity style={styles.button} onPress={openImagePicker}>
+                      <Text style={styles.buttonText}> Upload Image</Text>
+                    </TouchableOpacity>
         )}
       </View>
     </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 5, backgroundColor: "#5680E9" },
-  imageWrapper: { alignItems: "center", marginVertical: 10 },
-  uploadedImage: { width: 200, height: 200, marginTop: 30, borderRadius: 10 },
+  gradient: {
+    flex: 1,
+  },
+  container: {
+     flex: 1, 
+     padding: 5, 
+     },
+     tutorialContainer:{
+      marginBottom:20
+     },
+  imageWrapper: {
+     alignItems: "center",
+      marginVertical: 10
+     },
+  uploadedImage: {
+     width: 200, 
+     height: 200,
+      marginTop: 30,
+       borderRadius: 10
+       },
+  button: {
+    flexDirection: "row",
+    backgroundColor: "#6a11cb",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    alignItems: "center",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+    marginRight: 8,
+  },
 });
