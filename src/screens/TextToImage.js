@@ -1,9 +1,9 @@
-
 import React, { useState } from "react";
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image 
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import Btn from "../component/Btn";
 import axios from "axios";
 import { REPLICATE_API_TOKEN } from '@env';
 
@@ -11,6 +11,8 @@ export default function TextToImage() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState(null);
+  const [buttonVisible, setButtonVisible] = useState(true);
+  const [generateClicked, setGenerateClicked] = useState(false); // Track if the generate button was clicked
 
   const handleGenerate = async () => {
     if (!prompt) {
@@ -20,6 +22,7 @@ export default function TextToImage() {
 
     setLoading(true);
     setImageUrl(null);
+    setButtonVisible(false); // Hide the button after clicking
 
     try {
       const response = await axios.post(
@@ -82,32 +85,47 @@ export default function TextToImage() {
       console.error(error);
     } finally {
       setLoading(false);
+      setGenerateClicked(true); // Set generateClicked to true after the image is generated
     }
   };
 
+  const handleDownload = () => {
+    // Handle downloading the image (you could add logic to download to device here)
+    console.log("Download the image:", imageUrl);
+  };
+
   return (
-     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-    <View style={styles.container}>
-      <Text style={styles.title}>Text to Image Generation</Text>
-      <Text style={styles.subtitle}>Generate amazing images from your text descriptions.</Text>
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Text to Image Generation</Text>
+        <Text style={styles.subtitle}>Generate amazing images from your text descriptions.</Text>
 
-      <View style={styles.textcontainer}>
-        <Text style={styles.label}>Enter your Prompt</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Describe the image you want to generate..."
-          value={prompt}
-          onChangeText={setPrompt}
-        />
+        <View style={styles.textcontainer}>
+          <Text style={styles.label}>Enter your Prompt</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Describe the image you want to generate..."
+            value={prompt}
+            onChangeText={setPrompt}
+          />
+        </View>
+
+        {/* Conditionally render the Generate Image button */}
+        {!generateClicked && buttonVisible && (
+          <Btn onPress={handleGenerate} title="Generate Image" loading={loading} />
+        )}
+
+        {/* Display loading indicator while the image is being generated */}
+        {loading && <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />}
+
+        {/* Display the generated image */}
+        {imageUrl && <Image source={{ uri: imageUrl }} style={styles.generatedImage} />}
+
+        {/* Display the download button after the image is generated */}
+        {generateClicked && imageUrl && (
+          <Btn onPress={handleDownload} title="Download Image" />
+        )}
       </View>
-
-      <TouchableOpacity onPress={handleGenerate} style={styles.button}>
-        <Text style={styles.buttonText}>{loading ? "Generating..." : "Generate Image"}</Text>
-      </TouchableOpacity>
-
-      {loading && <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />}
-      {imageUrl && <Image source={{ uri: imageUrl }} style={styles.generatedImage} />}
-    </View>
     </LinearGradient>
   );
 }
@@ -149,30 +167,12 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 10
   },
-  button: {
-    flexDirection: "row",
-    backgroundColor: "#6a11cb",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    alignItems: "center",
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-    marginRight: 8,
-  },
   generatedImage: {
     width: 300,
     height: 300,
     marginTop: 20,
     borderRadius: 10,
-    alignSelf: "center"
+    alignSelf: "center",
+    marginBottom:20
   }
 });

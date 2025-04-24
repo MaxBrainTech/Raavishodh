@@ -7,32 +7,35 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  Text,Modal,
-  FlatList,TouchableOpacity,
+  Text, Modal,
+  FlatList, TouchableOpacity,
   KeyboardAvoidingView,
 } from "react-native";
 import FastImage from 'react-native-fast-image';
 import { launchImageLibrary, launchCamera } from "react-native-image-picker";
 import { request, PERMISSIONS } from "react-native-permissions";
 import FeatureLayout from "../component/FeatureLayout";
-import RNFS from "react-native-fs"; 
+import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from '@env';
 import LinearGradient from "react-native-linear-gradient";
+import Btn from "../component/Btn"
 
 export default function FaceEnhancement() {
   const [showTutorial, setShowTutorial] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [enhancedImage, setEnhancedImage] = useState(null);
   const [processing, setProcessing] = useState(false);
-const [isModalVisible, setModalVisible] = useState(true);
+  const [isModalVisible, setModalVisible] = useState(true);
+  const [readyToGenerate, setReadyToGenerate] = useState(false);
 
-const tutorialSteps = [
-  {
-    title: "Upload Your Image",
-    description:
-      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
-  },
-];
+
+  const tutorialSteps = [
+    {
+      title: "Upload Your Image",
+      description:
+        "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+    },
+  ];
 
   const requestPermissions = async () => {
     if (Platform.OS === "android") {
@@ -56,7 +59,9 @@ const tutorialSteps = [
     await requestPermissions();
     launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
-        processImage(response.assets[0].uri);
+        setSelectedImage(response.assets[0].uri);
+        setEnhancedImage(null);
+        setReadyToGenerate(true);
       }
     });
   };
@@ -65,7 +70,9 @@ const tutorialSteps = [
     await requestPermissions();
     launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
-        processImage(response.assets[0].uri);
+        setSelectedImage(response.assets[0].uri);
+        setEnhancedImage(null);
+        setReadyToGenerate(true);
       }
     });
   };
@@ -136,17 +143,17 @@ const tutorialSteps = [
 
     try {
       // Request storage permission for Android 10 and below
-    if (Platform.OS === "android") {
-      const permission = await request(PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE);
-      if (permission !== "granted") {
-        return Alert.alert("Permission Denied", "Storage permission is required to download images.");
+      if (Platform.OS === "android") {
+        const permission = await request(PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE);
+        if (permission !== "granted") {
+          return Alert.alert("Permission Denied", "Storage permission is required to download images.");
+        }
       }
-    }
 
-    const fileName = `enhanced_${Date.now()}.jpg`;
-    const downloadPath = Platform.OS === "android"
-      ? `${RNFS.ExternalStorageDirectoryPath}/Download/${fileName}`
-      : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+      const fileName = `enhanced_${Date.now()}.jpg`;
+      const downloadPath = Platform.OS === "android"
+        ? `${RNFS.ExternalStorageDirectoryPath}/Download/${fileName}`
+        : `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
 
       const downloadResult = await RNFS.downloadFile({
@@ -167,97 +174,103 @@ const tutorialSteps = [
 
 
   return (
-     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-    <KeyboardAvoidingView style={styles.container} behavior="padding">
-    <FlatList
-        data={[{}]} // dummy data to trigger FlatList
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={() => (
-      <View style={{ alignItems: "center", justifyContent: "center"  }}>
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+      <KeyboardAvoidingView style={styles.container} behavior="padding">
+        <FlatList
+          data={[{}]} // dummy data to trigger FlatList
+          keyExtractor={(_, index) => index.toString()}
+          renderItem={() => (
+            <View style={{ alignItems: "center", justifyContent: "center" }}>
 
-      <Modal
-  animationType="slide"
-  transparent={true}
-  visible={isModalVisible}
-  onRequestClose={() => setModalVisible(false)}
-  
->
-        <View style={styles.modalOverlay}>
-    <View style={styles.modalContentContainer}>
-      <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-        <Text style={styles.closeButtonText}>X</Text>
-      </TouchableOpacity>
+              <Modal
+                animationType="slide"
+                transparent={true}
+                visible={isModalVisible}
+                onRequestClose={() => setModalVisible(false)}
 
-      <FastImage
-        source={require("../../assets/gif/face_enhancement_tool-gif.gif")}
-        style={styles.gif}
-        resizeMode={FastImage.resizeMode.contain}
-      />
-    </View>
-  </View>
-      </Modal>
-        <FeatureLayout
-          title="AI Face Enhancement"
-          description="Enhance facial features using our advanced AI technology."
-          operationId="face-enhancement"
-        />
+              >
+                <View style={styles.modalOverlay}>
+                  <View style={styles.modalContentContainer}>
+                    <TouchableOpacity style={styles.closeButton}
+                      onPress={() => setModalVisible(false)}>
+                      <Text style={styles.closeButtonText}>X</Text>
+                    </TouchableOpacity>
 
-         {!selectedImage && showTutorial && (
-                  <View style={styles.tutorialContainer}>
-                    <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
-                    <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+                    <FastImage
+                      source={require("../../assets/gif/face_enhancement_tool-gif.gif")}
+                      style={styles.gif}
+                      resizeMode={FastImage.resizeMode.contain}
+                    />
                   </View>
-                )}
+                </View>
+              </Modal>
+              <FeatureLayout
+                title="AI Face Enhancement"
+                description="Enhance facial features using our advanced AI technology."
+                operationId="face-enhancement"
+              />
 
-         {/* Display the uploaded image */}
-         {selectedImage && (
-    <View style={styles.imageWrapper}>
-      <Text style={styles.imageLabel}>Before</Text>
-      <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
-    </View>
-  )}
+              {!selectedImage && showTutorial && (
+                <View style={styles.tutorialContainer}>
+                  <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+                  <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+                </View>
+              )}
 
-   {/* Show processing state */}
-   {processing && (
-    <View style={styles.processingContainer}>
-      <ActivityIndicator size="large" color="#ffffff" />
-      <Text style={styles.processingText}>Processing...</Text>
-    </View>
-  )}
+              {/* Display the uploaded image */}
+              {selectedImage && (
+                <View style={styles.imageWrapper}>
+                  <Text style={styles.imageLabel}>Selected Image</Text>
+                  <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
+                </View>
+              )}
+              {selectedImage && !processing && readyToGenerate && (
+                <Btn
+                  title="Generate"
+                  onPress={() => {
+                    setReadyToGenerate(false); 
+                    processImage(selectedImage);
+                  }}
+                />
+              )}
+
+              {/* Show processing state */}
+              {processing && (
+                <View style={styles.processingContainer}>
+                  <ActivityIndicator size="large" color="#ffffff" />
+                  <Text style={styles.processingText}>Processing...</Text>
+                </View>
+              )}
 
 
-       {/* Show enhanced image and Download button */}
-       {enhancedImage && (
-    <View style={styles.imageWrapper}>
-      <Text style={styles.imageLabel}>After</Text>
-      <Image source={{ uri: enhancedImage }} style={styles.uploadedImage} />
-        <TouchableOpacity
-                       style={styles.button}
-                       onPress={downloadImage}
-                     >
-                       <Text style={styles.buttonText}>Download Image</Text>
-                      
-                     </TouchableOpacity>
-    </View>
-  )}
+              {/* Show enhanced image and Download button */}
+              {enhancedImage && (
+                <View style={styles.imageWrapper}>
+                  <Text style={styles.imageLabel}>Result</Text>
+                  <Image source={{ uri: enhancedImage }} style={styles.uploadedImage} />
+                  <Btn
+                    title="Download Image"
+                    onPress={downloadImage}
+                  >
+                  </Btn>
+                </View>
+              )}
 
-          {/* Show Upload button only if no image is selected */}
-          {!selectedImage && !processing && (
-           <TouchableOpacity
-                       style={styles.button}
-                       onPress={openImagePicker}
-                     >
-                       <Text style={styles.buttonText}>Upload Image</Text>
-                      
-                     </TouchableOpacity>
+              {/* Show Upload button only if no image is selected */}
+              {!selectedImage && !processing && (
+                <Btn
+                  title="Upload Image"
+                  onPress={openImagePicker}
+                >
+                </Btn>
+              )}
+            </View>
           )}
-      </View>
-        )}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-/>
-    </KeyboardAvoidingView>
+          contentContainerStyle={{ paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
@@ -334,19 +347,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#ffffff",
-    marginBottom: 5,
+    marginBottom: 15,
   },
   imageContainer: {
     alignItems: "center",
     justifyContent: "center",
     marginVertical: 10,
   },
- 
+
   uploadedImage: {
     width: 200,
     height: 200,
     marginTop: 0,
-    marginBottom:30,
+    marginBottom: 30,
     borderRadius: 10,
     resizeMode: "cover",
   },
@@ -358,23 +371,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     marginTop: 5,
-  },
-  button: {
-    flexDirection: "row",
-    backgroundColor: "#6a11cb",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-    marginRight: 8,
   },
 });

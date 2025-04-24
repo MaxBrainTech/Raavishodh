@@ -21,6 +21,7 @@
     "@react-navigation/stack": "^7.1.2",
     "axios": "^1.8.4",
     "firebase": "^11.6.0",
+    "prop-types": "^15.8.1",
     "react": "19.0.0",
     "react-native": "0.78.0",
     "react-native-blob-util": "^0.21.2",

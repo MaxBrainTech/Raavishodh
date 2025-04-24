@@ -1,23 +1,53 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import auth from "@react-native-firebase/auth";
 import LinearGradient from "react-native-linear-gradient";
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const { redirectTo } = route.params || {};
+    const { setUser } = useContext(AuthContext);
+
+   useEffect(() =>{
+    GoogleSignin.configure({
+        webClientId:"355264972279-bknmot0cvadvt0ms4h37d50nei6rq0e5.apps.googleusercontent.com",
+    })
+   },[]);
 
     const handleLogin = () => {
         auth()
         .signInWithEmailAndPassword( email, password)
             .then(userCredential => {
                 Alert.alert('Login Success');
-                navigation.navigate('ProfileScreen');
+                setUser(userCredential.user);
+                if (redirectTo) {
+                    navigation.navigate(redirectTo);
+                  } else {
+                    navigation.navigate("Home");
+                  }
             })
             .catch(error => {
                 const message = error?.message || 'Something went wrong';
-                Alert.alert('Login Failed', error.message);
+                Alert.alert('Login Failed', message);
             });
+    };
+
+    const handleGoogleLogin = async () => {
+        try {
+            await GoogleSignin.hasPlayServices();
+            const { idToken } = await GoogleSignin.signIn();
+            const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+
+            await auth().signInWithCredential(googleCredential);
+            Alert.alert('Login Success');
+            navigation.navigate('ProfileScreen');
+        } catch (error) {
+            console.log('Google Sign-In error:', error);
+            const message = error?.message || 'Google Sign-In failed';
+            Alert.alert('Login Failed', message);
+        }
     };
 
     return (
@@ -27,18 +57,25 @@ export default function LoginScreen({ navigation }) {
 
             <TextInput
                 placeholder="Email"
+                value={email}
                 onChangeText={setEmail}
                 style={styles.input} />
 
             <TextInput
                 placeholder="Password"
-                onChangeText={setPassword} secureTextEntry
+                value={password}
+                onChangeText={setPassword} 
+                secureTextEntry={true}
                 style={styles.input} />
 
             <TouchableOpacity style={styles.button}
                 onPress={handleLogin} >
                 <Text style={styles.buttonText}>Log In</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity style={styles.button} onPress={handleGoogleLogin}>
+                    <Text style={styles.buttonText}>Log In with Google</Text>
+                </TouchableOpacity>
 
              <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
                     <Text style={styles.link}>Don't have an account? Signup</Text>

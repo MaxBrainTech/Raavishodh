@@ -1,18 +1,20 @@
 import React, { useState } from "react";
-import { 
-  View, Text, Image, Button, StyleSheet, 
-  FlatList, ActivityIndicator, Alert ,TouchableOpacity
+import {
+  View, Text, Image, StyleSheet,
+  FlatList, ActivityIndicator, Alert
 } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import LinearGradient from "react-native-linear-gradient";
-import RNFS from "react-native-fs"; 
+import FeatureLayout from "../component/FeatureLayout";
+import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from '@env';
+import Btn from "../component/Btn";
 
 const tutorialSteps = [
   {
     title: "Upload Your Image",
     description:
-    "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
   }
 ];
 
@@ -134,62 +136,64 @@ export default function BwColourization() {
   };
 
   return (
-     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-    <FlatList
-      data={[]} 
-      keyExtractor={(_, index) => index.toString()}
-      ListHeaderComponent={
-        <View style={styles.container}>
-          <Text style={styles.title}>B & W Colorization</Text>
-          <Text style={styles.subtitle}>
-            Bring black & white photos to life with colors.
-          </Text>
-
-          {!image && showTutorial && (
-            <View style={styles.tutorialContainer}>
-              <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
-              <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
-            </View>
-          )}
-
-          {!image && (
-           <TouchableOpacity style={styles.button} onPress={pickImage}>
-                      <Text style={styles.buttonText}> Upload Image</Text>
-                    </TouchableOpacity>
-          )}
-
-          {image && (
-            <View>
-              <Text style={styles.resultText}>Selected Image</Text>
-              <Image source={{ uri: image }} style={styles.image} />
-            </View>
-          )}
-
-          {image && !processedImage && (
-            <View style={styles.button}>
-              <Button 
-                title="Generate Image" 
-                onPress={generateColorizedImage} 
-                disabled={loading} 
-                color="blue" 
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+      <FlatList
+        data={[]}
+        keyExtractor={(_, index) => index.toString()}
+        ListHeaderComponent={
+          <View style={styles.container}>
+          
+            <FeatureLayout
+                title="B & W Colorization"
+                description=" Bring black & white photos to life with colors."
+                
               />
-            </View>
-          )}
 
-          {loading && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
-
-          {processedImage && (
-            <View>
-              <Text style={styles.resultText}>Colorized Image</Text>
-              <Image source={{ uri: processedImage }} style={styles.image} />
-              <View style={styles.button}>
-                <Button title="Download Image" onPress={downloadImage} color="blue" />
+            {!image && showTutorial && (
+              <View style={styles.tutorialContainer}>
+                <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+                <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
               </View>
-            </View>
-          )}
-        </View>
-      }
-    />
+            )}
+
+            {!image && (
+              <Btn
+                title="Upload Image"
+                onPress={pickImage}>
+              </Btn>
+            )}
+
+            {image && (
+              <View>
+                <Text style={styles.resultText}>Selected Image</Text>
+                <Image source={{ uri: image }} style={styles.image} />
+              </View>
+            )}
+
+            {image && !processedImage && (
+              <View style={styles.button}>
+                <Btn
+                  title="Generate Image"
+                  onPress={generateColorizedImage}
+                  disabled={loading}
+                />
+              </View>
+            )}
+
+            {loading && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
+
+            {processedImage && (
+              <View>
+                <Text style={styles.resultText}>Colorized Image</Text>
+                <Image source={{ uri: processedImage }} style={styles.image} />
+                <View style={styles.button}>
+                  <Btn title="Download Image" onPress={downloadImage} />
+                </View>
+              </View>
+            )}
+          </View>
+        }
+      />
     </LinearGradient>
   );
 }
@@ -241,25 +245,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignSelf: "center",
   },
-  button: {
-    flexDirection: "row",
-    backgroundColor: "#6a11cb",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    alignItems: "center",
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-    marginRight: 8,
-  },
+
   loader: {
     marginTop: 10,
   },

@@ -9,9 +9,10 @@ import {
   Animated,
   ActivityIndicator,
 } from "react-native";
-import { Card } from "react-native-paper";
+import { Button, Card } from "react-native-paper";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import Btn from "../component/Btn";
 
 const features = [
   {
@@ -99,7 +100,7 @@ const Homescreen = ({ navigation }) => {
           <Text style={styles.subtitle}>
             Experience professional face enhancement and image editing powered by AI.
           </Text>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.button}
             onPress={() => navigation.navigate("FaceEnhancement")}
           >
@@ -108,7 +109,17 @@ const Homescreen = ({ navigation }) => {
               source={require("../../assets/arrow-right.png")}
               style={styles.arrowIcon}
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+
+          <Btn
+            onPress={() => navigation.navigate("FaceEnhancement")}
+            title={"Try Face enhancement"}
+          >
+            <Image
+              source={require("../../assets/arrow-right.png")}
+              style={styles.arrowIcon}
+            />
+          </Btn>
         </View>
 
         {/* Section Title */}
@@ -187,7 +198,7 @@ const Homescreen = ({ navigation }) => {
               );
             }
 
-            return null; 
+            return null;
           })
         )}
       </ScrollView>
@@ -217,21 +228,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#eee",
     marginBottom: 20,
-  },
-  button: {
-    flexDirection: "row",
-    backgroundColor: "#6a11cb",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    alignItems: "center",
-    alignSelf: "flex-start",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-    marginRight: 8,
   },
   arrowIcon: {
     width: 20,

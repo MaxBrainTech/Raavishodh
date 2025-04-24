@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
-  Alert,Modal,TouchableOpacity,
+  Alert, Modal, TouchableOpacity,
   ScrollView,
 } from "react-native";
 import FastImage from 'react-native-fast-image';
@@ -18,6 +18,7 @@ import RNFS from "react-native-fs";
 import axios from "axios";
 import { REPLICATE_API_TOKEN } from "@env";
 import LinearGradient from "react-native-linear-gradient";
+import Btn from "../component/Btn";
 
 const tutorialSteps = [
   {
@@ -121,124 +122,122 @@ export default function FaceToImage() {
     try {
       const fileName = `enhanced_${Date.now()}.jpg`; // you can also get extension dynamically if needed
       const downloadDest = `${RNFS.DownloadDirectoryPath}/${fileName}`;
-      
+
       const { promise } = RNFS.downloadFile({
         fromUrl: imageUrl,
         toFile: downloadDest,
       });
-  
+
       await promise;
-  
+
       Alert.alert("Success", "Image downloaded successfully to Downloads folder!");
     } catch (error) {
       console.error("Download error:", error);
       Alert.alert("Error", "Failed to download image.");
     }
   };
-  
+
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.container}>
-      <Modal
-  animationType="slide"
-  transparent={true}
-  visible={isModalVisible}
-  onRequestClose={() => setModalVisible(false)}
-  
->
-        <View style={styles.modalOverlay}>
-    <View style={styles.modalContentContainer}>
-      <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-        <Text style={styles.closeButtonText}>X</Text>
-      </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.container}>
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isModalVisible}
+            onRequestClose={() => setModalVisible(false)}
 
-      <FastImage
-        source={require("../../assets/gif/FacetoImage.gif")}
-        style={styles.gif}
-        resizeMode={FastImage.resizeMode.contain}
-      />
-    </View>
-  </View>
-      </Modal>
-      <FeatureLayout
-          title="Face To Make Image"
-          description="Make Realistic Images Of People Instantly."
-          operationId="face-enhancement"
-        />
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContentContainer}>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.closeButtonText}>X</Text>
+                </TouchableOpacity>
 
-        {!selectedImage && showTutorial && (
-          <View style={styles.tutorialContainer}>
-            <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
-            <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
-          </View>
-        )}
-
-        {/* Only show upload button if no image is selected */}
-        {!selectedImage && (
-           <TouchableOpacity
-                                style={styles.button}
-                                onPress={openImagePicker}
-                              >
-                                <Text style={styles.buttonText}>Upload Image</Text>
-                               
-                              </TouchableOpacity>
-        )}
-
-        {/* Show uploaded image */}
-        {selectedImage && (
-          <View style={styles.imageWrapper}>
-            <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
-          </View>
-        )}
-
-        {/* Show input field for prompt */}
-        {selectedImage && (
-          <>
-            <View style={styles.promptContainer}>
-              <Text style={styles.promptLabel}>Enter a Prompt:</Text>
-              <TextInput
-                style={styles.promptInput}
-                placeholder="Describe the enhancement..."
-                placeholderTextColor="#aaa"
-                value={prompt}
-                onChangeText={setPrompt}
-              />
-            </View>
-
-            {prompt.trim() && !processing && !enhancedImage && (
-              <Button title="Generate" onPress={processImage} color="blue" />
-            )}
-
-            {processing && (
-              <View style={styles.processingContainer}>
-                <ActivityIndicator size="large" color="#ffffff" />
-                <Text style={styles.processingText}>Processing...</Text>
+                <FastImage
+                  source={require("../../assets/gif/FacetoImage.gif")}
+                  style={styles.gif}
+                  resizeMode={FastImage.resizeMode.contain}
+                />
               </View>
-            )}
+            </View>
+          </Modal>
+          <FeatureLayout
+            title="Face To Make Image"
+            description="Make Realistic Images Of People Instantly."
+            operationId="face-enhancement"
+          />
 
-            {enhancedImage && Array.isArray(enhancedImage) && (
-              <FlatList
-                data={enhancedImage}
-                keyExtractor={(_, index) => index.toString()}
-                renderItem={({ item }) => (
-                  <View style={styles.imageWrapper}>
-                    <Image source={{ uri: item }} style={styles.uploadedImage} />
-                    <TouchableOpacity
-          style={styles.button}
-          onPress={() => downloadImage(item)}
-        >
-          <Text style={styles.buttonText}>Download</Text>
-        </TouchableOpacity>
-                  </View>
-                )}
-                scrollEnabled={false}
-              />
-            )}
-          </>
-        )}
-      </View>
-    </ScrollView>
+          {!selectedImage && showTutorial && (
+            <View style={styles.tutorialContainer}>
+              <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+              <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+            </View>
+          )}
+
+          {/* Only show upload button if no image is selected */}
+          {!selectedImage && (
+            <Btn
+              title="Upload Image"
+              onPress={openImagePicker}
+            >
+            </Btn>
+          )}
+
+          {/* Show uploaded image */}
+          {selectedImage && (
+            <View style={styles.imageWrapper}>
+              <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
+            </View>
+          )}
+
+          {/* Show input field for prompt */}
+          {selectedImage && (
+            <>
+              <View style={styles.promptContainer}>
+                <Text style={styles.promptLabel}>Enter a Prompt:</Text>
+                <TextInput
+                  style={styles.promptInput}
+                  placeholder="Describe the enhancement..."
+                  placeholderTextColor="#aaa"
+                  value={prompt}
+                  onChangeText={setPrompt}
+                />
+              </View>
+
+              {prompt.trim() && !processing && !enhancedImage && (
+                <Btn title="Generate"
+                 onPress={processImage} />
+              )}
+
+              {processing && (
+                <View style={styles.processingContainer}>
+                  <ActivityIndicator size="large" color="#ffffff" />
+                  <Text style={styles.processingText}>Processing...</Text>
+                </View>
+              )}
+
+              {enhancedImage && Array.isArray(enhancedImage) && (
+                <FlatList
+                  data={enhancedImage}
+                  keyExtractor={(_, index) => index.toString()}
+                  renderItem={({ item }) => (
+                    <View style={styles.imageWrapper}>
+                      <Image source={{ uri: item }} style={styles.uploadedImage} />
+                      <Btn
+                      title="Download"
+                        onPress={() => downloadImage(item)}
+                      >
+                     </Btn>
+                    </View>
+                  )}
+                  scrollEnabled={false}
+                />
+              )}
+            </>
+          )}
+        </View>
+      </ScrollView>
     </LinearGradient>
   );
 }
@@ -355,23 +354,5 @@ const styles = StyleSheet.create({
   imageWrapper: {
     marginVertical: 10,
     alignItems: "center",
-  },
-  button: {
-    flexDirection: "row",
-    backgroundColor: "#6a11cb",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-    marginRight: 8,
   },
 });

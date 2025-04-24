@@ -360,6 +360,7 @@ import {
 } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import LinearGradient from "react-native-linear-gradient";
+import Btn from "../component/Btn"
 import axios from "axios";
 import auth from '@react-native-firebase/auth';
 import RNFS from "react-native-fs";
@@ -520,9 +521,9 @@ const handleDownload = () => {
         )}
 
         {!selectedImage ? (
-           <TouchableOpacity style={styles.button} onPress={openImagePicker}>
-           <Text style={styles.buttonText}> Upload Image</Text>
-         </TouchableOpacity>
+           <Btn 
+          title="Upload Image" onPress={openImagePicker}>
+         </Btn>
          
         ) : (
           <>
@@ -563,9 +564,9 @@ const handleDownload = () => {
               }}
             />
         
-            <TouchableOpacity style={styles.button}  onPress={handleDownload}>
-              <Text style={styles.buttonText}> Download Image</Text>
-            </TouchableOpacity>
+            <Btn title="Download Image"
+             onPress={handleDownload}>
+            </Btn>
           </>
         )}
       </View>
