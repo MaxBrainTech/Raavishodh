@@ -100,18 +100,8 @@ const Homescreen = ({ navigation }) => {
           <Text style={styles.subtitle}>
             Experience professional face enhancement and image editing powered by AI.
           </Text>
-          {/* <TouchableOpacity
-            style={styles.button}
-            onPress={() => navigation.navigate("FaceEnhancement")}
-          >
-            <Text style={styles.buttonText}>Try Face Enhancement</Text>
-            <Image
-              source={require("../../assets/arrow-right.png")}
-              style={styles.arrowIcon}
-            />
-          </TouchableOpacity> */}
-
-          <Btn
+         
+<Btn
             onPress={() => navigation.navigate("FaceEnhancement")}
             title={"Try Face enhancement"}
           >

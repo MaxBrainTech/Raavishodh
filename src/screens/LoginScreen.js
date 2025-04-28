@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import auth from "@react-native-firebase/auth";
 import LinearGradient from "react-native-linear-gradient";
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -7,8 +8,11 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const { redirectTo } = route.params || {};
-    const { setUser } = useContext(AuthContext);
+    // const { redirectTo } = route.params || {};
+    // const { setUser } = useContext(AuthContext);
+    const route = useRoute();
+
+
 
    useEffect(() =>{
     GoogleSignin.configure({
@@ -23,10 +27,11 @@ export default function LoginScreen({ navigation }) {
                 Alert.alert('Login Success');
                 setUser(userCredential.user);
                 if (redirectTo) {
-                    navigation.navigate(redirectTo);
-                  } else {
+                    navigation.navigate(redirectTo, { continueAction: action });
+                } else {
                     navigation.navigate("Home");
-                  }
+                }
+                
             })
             .catch(error => {
                 const message = error?.message || 'Something went wrong';
@@ -40,9 +45,15 @@ export default function LoginScreen({ navigation }) {
             const { idToken } = await GoogleSignin.signIn();
             const googleCredential = auth.GoogleAuthProvider.credential(idToken);
 
-            await auth().signInWithCredential(googleCredential);
+            const userCredential = await auth().signInWithCredential(googleCredential);
             Alert.alert('Login Success');
-            navigation.navigate('ProfileScreen');
+            setUser(userCredential.user);
+
+        if (redirectTo) {
+            navigation.navigate(redirectTo, { continueAction: action });
+        } else {
+            navigation.navigate('Home');
+        }
         } catch (error) {
             console.log('Google Sign-In error:', error);
             const message = error?.message || 'Google Sign-In failed';

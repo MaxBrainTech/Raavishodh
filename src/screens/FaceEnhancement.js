@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   StyleSheet,
-  Button,
   Image,
   Alert,
   Platform,
@@ -12,6 +11,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import FastImage from 'react-native-fast-image';
+import { useNavigation } from '@react-navigation/native';
 import { launchImageLibrary, launchCamera } from "react-native-image-picker";
 import { request, PERMISSIONS } from "react-native-permissions";
 import FeatureLayout from "../component/FeatureLayout";
@@ -27,7 +27,8 @@ export default function FaceEnhancement() {
   const [processing, setProcessing] = useState(false);
   const [isModalVisible, setModalVisible] = useState(true);
   const [readyToGenerate, setReadyToGenerate] = useState(false);
-
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigation = useNavigation();
 
   const tutorialSteps = [
     {
@@ -140,7 +141,11 @@ export default function FaceEnhancement() {
 
   const downloadImage = async () => {
     if (!enhancedImage) return Alert.alert("Error", "No image to download!");
-
+ if (!isLoggedIn) {
+     
+      navigation.navigate('Login');  
+      return;
+    }
     try {
       // Request storage permission for Android 10 and below
       if (Platform.OS === "android") {
