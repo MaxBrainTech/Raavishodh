@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import auth from "@react-native-firebase/auth";
+import auth from '@react-native-firebase/auth';
 import LinearGradient from "react-native-linear-gradient";
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    // const { redirectTo } = route.params || {};
-    // const { setUser } = useContext(AuthContext);
+    const [user, setUser] = useState(false);
+    
     const route = useRoute();
-
+     const { redirectTo } = route.params || {};
 
 
    useEffect(() =>{
     GoogleSignin.configure({
-        webClientId:"355264972279-bknmot0cvadvt0ms4h37d50nei6rq0e5.apps.googleusercontent.com",
+        webClientId:"741257638758-h38aq37042j37tt82sf7jss3envtid8o.apps.googleusercontent.com",
     })
    },[]);
 
@@ -27,7 +27,7 @@ export default function LoginScreen({ navigation }) {
                 Alert.alert('Login Success');
                 setUser(userCredential.user);
                 if (redirectTo) {
-                    navigation.navigate(redirectTo, { continueAction: action });
+                    navigation.replace(redirectTo);
                 } else {
                     navigation.navigate("Home");
                 }
@@ -50,7 +50,7 @@ export default function LoginScreen({ navigation }) {
             setUser(userCredential.user);
 
         if (redirectTo) {
-            navigation.navigate(redirectTo, { continueAction: action });
+            navigation.navigate(redirectTo);
         } else {
             navigation.navigate('Home');
         }
@@ -61,6 +61,23 @@ export default function LoginScreen({ navigation }) {
         }
     };
 
+    const handleForgotPassword = () => {
+        if (!email) {
+            Alert.alert('Input Required', 'Please enter your email to reset password.');
+            return;
+        }
+    
+        auth()
+            .sendPasswordResetEmail(email)
+            .then(() => {
+                Alert.alert('Reset Email Sent', 'Check your inbox to reset your password.');
+            })
+            .catch(error => {
+                const message = error?.message || 'Something went wrong';
+                Alert.alert('Error', message);
+            });
+    };
+    
     return (
         <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
         <View style={styles.container}>
@@ -91,6 +108,11 @@ export default function LoginScreen({ navigation }) {
              <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
                     <Text style={styles.link}>Don't have an account? Signup</Text>
                   </TouchableOpacity>
+
+                  <TouchableOpacity onPress={handleForgotPassword}>
+    <Text style={styles.forgotText}>Forgot Password?</Text>
+</TouchableOpacity>
+
         </View>
         </LinearGradient>
     );
@@ -137,4 +159,11 @@ const styles = StyleSheet.create({
         marginTop: 20,
         textAlign: 'center',
       },
+      forgotText: {
+        color: '#fff',
+        textAlign: 'right',
+        marginBottom: 10,
+        textDecorationLine: 'underline',
+    }
+    
 });

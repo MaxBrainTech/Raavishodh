@@ -5,6 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {  StyleSheet, Platform } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
+import firebase from '@react-native-firebase/app';
+import auth from '@react-native-firebase/auth';
 
 import HomeScreen from './src/screens/Homescreen';
 import FaceEnhancement from './src/screens/FaceEnhancement';
@@ -24,6 +26,21 @@ import Faq from "./src/screens/Faq";
 import PhotoRestoration from "./src/screens/PhotoRestoration"; 
 import LoginScreen from "./src/screens/LoginScreen"; 
 import SignupScreen from "./src/screens/SignupScreen"; 
+
+if (!firebase.apps.length) {
+  firebase.initializeApp({
+   
+    apiKey: "AIzaSyCc8ewgMJMlrz16lwPxk4tXaPQdSxspLPc",
+    authDomain: "airaavishodh-11ccc.firebaseapp.com",
+    projectId: "airaavishodh-11ccc",
+    storageBucket: "airaavishodh-11ccc.firebasestorage.app",
+    messagingSenderId: "355264972279",
+    appId: "1:355264972279:web:79810c8375f65e4afddaf2",
+    measurementId: "G-LENKJZLJR3"
+  });
+} else {
+  firebase.app(); 
+}
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();

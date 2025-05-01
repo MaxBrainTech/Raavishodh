@@ -4,7 +4,6 @@ import {
   View,
   Text,
   Image,
-  Button,
   ActivityIndicator,
   Alert,
   StyleSheet,

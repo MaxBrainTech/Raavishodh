@@ -29,6 +29,8 @@ export default function FaceEnhancement() {
   const [readyToGenerate, setReadyToGenerate] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigation = useNavigation();
+  const [hasUsedOnce, setHasUsedOnce] = useState(false);
+
 
   const tutorialSteps = [
     {
@@ -58,22 +60,42 @@ export default function FaceEnhancement() {
 
   const openCamera = async () => {
     await requestPermissions();
+    if (hasUsedOnce && !isLoggedIn) {
+      navigation.navigate('Login', {
+        redirectTo: 'FaceEnhancement',
+      });
+      return;
+    }
+    
     launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
+    
       if (!response.didCancel && response.assets?.length > 0) {
         setSelectedImage(response.assets[0].uri);
         setEnhancedImage(null);
         setReadyToGenerate(true);
+        setHasUsedOnce(true);
+
       }
     });
   };
 
   const openGallery = async () => {
     await requestPermissions();
+    if (hasUsedOnce && !isLoggedIn) {
+      navigation.navigate('Login', {
+        redirectTo: 'FaceEnhancement',
+      });
+      return;
+    }
+    
     launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
+    
       if (!response.didCancel && response.assets?.length > 0) {
         setSelectedImage(response.assets[0].uri);
         setEnhancedImage(null);
         setReadyToGenerate(true);
+        setHasUsedOnce(true);
+
       }
     });
   };
@@ -141,11 +163,13 @@ export default function FaceEnhancement() {
 
   const downloadImage = async () => {
     if (!enhancedImage) return Alert.alert("Error", "No image to download!");
- if (!isLoggedIn) {
-     
-      navigation.navigate('Login');  
+    if (!isLoggedIn) {
+      navigation.navigate('Login', {
+        redirectTo: 'FaceEnhancement',
+      });
       return;
     }
+    
     try {
       // Request storage permission for Android 10 and below
       if (Platform.OS === "android") {

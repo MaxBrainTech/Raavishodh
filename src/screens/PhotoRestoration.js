@@ -177,12 +177,13 @@ export default function PhotoRestoration() {
 
           {image && !processedImage && (
             <View style={styles.button}>
-              <Button 
-                title="Generate New Image" 
-                onPress={generateNewFeatureImage} 
-                disabled={loading} 
-                color="blue" 
-              />
+              
+               <Btn
+                            title="Generate Image"
+                            onPress={generateNewFeatureImage}
+                            disabled={loading}
+                          >
+                          </Btn>
             </View>
           )}
 
@@ -192,9 +193,12 @@ export default function PhotoRestoration() {
             <View>
               <Text style={styles.resultText}>Result Image</Text>
               <Image source={{ uri: processedImage }} style={styles.image} />
-              <View style={styles.button}>
-                <Button title="Download Image" onPress={downloadImage} color="blue" />
-              </View>
+             
+              <Btn
+                            title="Download Image"
+                            onPress={downloadImage}
+                          >
+                          </Btn>
             </View>
           )}
         </View>
@@ -250,10 +254,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignSelf: "center",
   },
-  button: {
-    marginBottom: 20,
-    alignSelf: "center",
-  },
   loader: {
     marginTop: 10,
   },
@@ -264,23 +264,5 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 5,
   },
-  button: {
-    flexDirection: "row",
-    backgroundColor: "#6a11cb",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    alignItems: "center",
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-    marginRight: 8,
-  },
+  
 });
