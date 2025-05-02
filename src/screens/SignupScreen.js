@@ -7,7 +7,9 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import auth from '@react-native-firebase/auth';
+import { auth } from '../services/Firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+
 import LinearGradient from "react-native-linear-gradient";
 
 export default function SignupScreen({ navigation }) {
@@ -19,12 +21,11 @@ export default function SignupScreen({ navigation }) {
       Alert.alert('Error', 'Please fill all fields');
       return;
     }
-
-    auth()
-      .createUserWithEmailAndPassword(email, password)
+  
+    createUserWithEmailAndPassword(auth, email, password)
       .then(() => {
         Alert.alert('Success', 'Account created!');
-        // Navigate to Home or Login
+        navigation.replace('HomeTab'); 
       })
       .catch(error => {
         if (error.code === 'auth/email-already-in-use') {
@@ -36,7 +37,6 @@ export default function SignupScreen({ navigation }) {
         }
       });
   };
-
   return (
      <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <View style={styles.container}>

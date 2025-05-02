@@ -144,8 +144,8 @@ const handleDownload = () => {
           { text: "Cancel", style: "cancel" },
           {
             text: "Login / Sign Up",
-            // onPress: () => navigation.navigate("Login", { returnTo: "Ghiblify" }),
-            onPress:() => navigation.navigate("Login"),
+            onPress: () => navigation.navigate("Login", { returnTo: "Ghiblify" }),
+            // onPress:() => navigation.navigate("Login"),
           },
         ]
       );
