@@ -6,9 +6,8 @@ import LinearGradient from "react-native-linear-gradient";
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import {
     signInWithEmailAndPassword,GoogleAuthProvider,signInWithCredential,
-    sendPasswordResetEmail,
+    sendPasswordResetEmail, getAuth
   } from 'firebase/auth';
-
   export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -36,29 +35,42 @@ import {
           Alert.alert('Login Failed', message);
         });
     };
+    
   
-    const handleGoogleLogin = async () => {
+    const onGoogleButtonPress = async () => {
       try {
-        await GoogleSignin.hasPlayServices();
-        const { idToken } = await GoogleSignin.signIn();
-        console.log('ID Token:', idToken); 
-        
-        if (!idToken) throw new Error('Missing Google ID Token');
-        
+        await GoogleSignin.signOut();
+      
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        console.log('Google Play Services available.');
+    
+       
+        const signInResult = await GoogleSignin.signIn();
+        console.log('Google Sign-In result:', signInResult);
+    
+      
+        let idToken = signInResult.data?.idToken || signInResult.idToken;
+        console.log('ID Token:', idToken);
+    
+        if (!idToken) {
+          throw new Error('No ID token found');
+        }
+    
+       
         const googleCredential = GoogleAuthProvider.credential(idToken);
-        
-        const userCredential = await signInWithCredential(auth, googleCredential);
+        console.log('Google Credential:', googleCredential);
+    
+    
+        await signInWithCredential(getAuth(), googleCredential);
+        console.log('Firebase sign-in successful.');
+    
   
-        Alert.alert('Login Success');
-        setUser(userCredential.user);
-        navigation.replace(redirectTo || "HomeTab");
+        navigation.navigate('Profile');
       } catch (error) {
-        console.log('Google Sign-In error:', error);
-        const message = error?.message || 'Google Sign-In failed';
-        Alert.alert('Login Failed', message);
+        console.error('Google Sign-In error:', error);
       }
     };
-  
+    
     const handleForgotPassword = () => {
       if (!email) {
         Alert.alert('Input Required', 'Please enter your email to reset password.');
@@ -98,7 +110,7 @@ import {
                     <Text style={styles.buttonText}>Log In</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.button} onPress={handleGoogleLogin}>
+                <TouchableOpacity style={styles.button} onPress={onGoogleButtonPress}>
                     <Text style={styles.buttonText}>Log In with Google</Text>
                 </TouchableOpacity>
 
