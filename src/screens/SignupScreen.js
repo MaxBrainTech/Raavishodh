@@ -8,24 +8,30 @@ import {
   Alert,
 } from 'react-native';
 import { auth } from '../services/Firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 import LinearGradient from "react-native-linear-gradient";
 
 export default function SignupScreen({ navigation }) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSignup = () => {
-    if (!email || !password) {
+    if (!firstName || !lastName || !email || !password) {
       Alert.alert('Error', 'Please fill all fields');
       return;
     }
   
     createUserWithEmailAndPassword(auth, email, password)
-      .then(() => {
+    .then(userCredential => {
+     
+      updateProfile(userCredential.user, {
+        displayName: `${firstName} ${lastName}`,
+      });
         Alert.alert('Success', 'Account created!');
-        navigation.replace('HomeTab'); 
+        navigation.replace('Login'); 
       })
       .catch(error => {
         if (error.code === 'auth/email-already-in-use') {
@@ -41,6 +47,20 @@ export default function SignupScreen({ navigation }) {
      <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
+
+      <TextInput
+          placeholder="First Name"
+          value={firstName}
+          onChangeText={setFirstName}
+          style={styles.input}
+        />
+
+        <TextInput
+          placeholder="Last Name"
+          value={lastName}
+          onChangeText={setLastName}
+          style={styles.input}
+        />
 
       <TextInput
         placeholder="Email"

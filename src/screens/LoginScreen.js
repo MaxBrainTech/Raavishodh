@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import { auth } from '../services/Firebase';
+import { auth  } from '../services/Firebase';
 import LinearGradient from "react-native-linear-gradient";
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import {
     signInWithEmailAndPassword,GoogleAuthProvider,signInWithCredential,
-    sendPasswordResetEmail, getAuth
+    sendPasswordResetEmail, getAuth, updateProfile
   } from 'firebase/auth';
   export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
@@ -25,16 +25,24 @@ import {
 
     const handleLogin = () => {
       signInWithEmailAndPassword(auth, email, password)
-        .then(userCredential => {
-          Alert.alert('Login Success');
-          setUser(userCredential.user);
-          navigation.navigate("HomeTab");
-        })
-        .catch(error => {
-          const message = error?.message || 'Something went wrong';
-          Alert.alert('Login Failed', message);
-        });
-    };
+      .then(async userCredential => {
+        const user = userCredential.user;
+  
+        if (!user.displayName || user.displayName.trim() === '') {
+          await updateProfile(user, {
+            
+          });
+        }
+  
+        Alert.alert('Login Success', `Welcome, ${user.displayName || 'User'}!`);
+        setUser(user);
+        navigation.navigate("Profile"); 
+      })
+      .catch(error => {
+        const message = error?.message || 'Something went wrong';
+        Alert.alert('Login Failed', message);
+      });
+  };
     
   
     const onGoogleButtonPress = async () => {
@@ -171,7 +179,7 @@ const styles = StyleSheet.create({
     forgotText: {
         color: '#fff',
         textAlign: 'right',
-        marginBottom: 10,
+        marginTop: 20,
         textDecorationLine: 'underline',
     }
 

@@ -23,7 +23,8 @@ export default function ProfileScreen() {
     const user = auth.currentUser;
     if (user) {
       setEmail(user.email || '');
-     
+      setName(user.displayName || '');
+      setAvatar(user.photoURL || 'https://i.pravatar.cc/150');
     }
   }, []);
 
@@ -70,7 +71,7 @@ const handleSave = () => {
               setEmail('');    
              
 
-              navigation.replace('Login'); 
+              navigation.replace('Profile'); 
             } catch (error) {
               console.log('Logout Error:', error.message);
               Alert.alert('Logout Error', error.message);
@@ -153,9 +154,12 @@ const handleSave = () => {
   onPress={() => navigation.navigate('Login')} />
 </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
+{auth.currentUser && (
+  <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+    <Text style={styles.logoutText}>Logout</Text>
+  </TouchableOpacity>
+)}
+
     </ScrollView>
     </LinearGradient>
   );
