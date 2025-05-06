@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -6,8 +6,10 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  Text, Modal,
-  FlatList, TouchableOpacity,
+  Text,
+  Modal,
+  FlatList,
+  TouchableOpacity,
   KeyboardAvoidingView,
 } from "react-native";
 import FastImage from 'react-native-fast-image';
@@ -18,7 +20,8 @@ import FeatureLayout from "../component/FeatureLayout";
 import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from '@env';
 import LinearGradient from "react-native-linear-gradient";
-import Btn from "../component/Btn"
+import Btn from "../component/Btn";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function FaceEnhancement() {
   const [showTutorial, setShowTutorial] = useState(true);
@@ -31,6 +34,22 @@ export default function FaceEnhancement() {
   const navigation = useNavigation();
   const [hasUsedOnce, setHasUsedOnce] = useState(false);
 
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const userLoggedIn = await AsyncStorage.getItem("isLoggedIn");
+      setIsLoggedIn(userLoggedIn === "true");
+
+      const lastUsedDate = await AsyncStorage.getItem("lastUsedDate");
+      const today = new Date().toISOString().split("T")[0];
+      if (lastUsedDate === today) {
+        setHasUsedOnce(true);
+      } else {
+        setHasUsedOnce(false);
+      }
+    };
+
+    checkLoginStatus();
+  }, []);
 
   const tutorialSteps = [
     {
@@ -51,6 +70,13 @@ export default function FaceEnhancement() {
   };
 
   const openImagePicker = () => {
+    if (!isLoggedIn) {
+      navigation.navigate('Login', {
+        redirectTo: 'FaceEnhancement',
+      });
+      return;
+    }
+
     Alert.alert("Choose an Option", "Select an option to upload an image.", [
       { text: "Camera", onPress: openCamera },
       { text: "Gallery", onPress: openGallery },
@@ -60,42 +86,36 @@ export default function FaceEnhancement() {
 
   const openCamera = async () => {
     await requestPermissions();
-    if (hasUsedOnce && !isLoggedIn) {
-      navigation.navigate('Login', {
-        redirectTo: 'FaceEnhancement',
-      });
+    if (hasUsedOnce) {
+      Alert.alert("You have already used this feature today.");
       return;
     }
-    
+
     launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
-    
       if (!response.didCancel && response.assets?.length > 0) {
         setSelectedImage(response.assets[0].uri);
         setEnhancedImage(null);
         setReadyToGenerate(true);
         setHasUsedOnce(true);
-
+        AsyncStorage.setItem("lastUsedDate", new Date().toISOString().split("T")[0]);
       }
     });
   };
 
   const openGallery = async () => {
     await requestPermissions();
-    if (hasUsedOnce && !isLoggedIn) {
-      navigation.navigate('Login', {
-        redirectTo: 'FaceEnhancement',
-      });
+    if (hasUsedOnce) {
+      Alert.alert("You have already used this feature today.");
       return;
     }
-    
+
     launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
-    
       if (!response.didCancel && response.assets?.length > 0) {
         setSelectedImage(response.assets[0].uri);
         setEnhancedImage(null);
         setReadyToGenerate(true);
         setHasUsedOnce(true);
-
+        AsyncStorage.setItem("lastUsedDate", new Date().toISOString().split("T")[0]);
       }
     });
   };
@@ -107,10 +127,8 @@ export default function FaceEnhancement() {
     setSelectedImage(imageUri);
 
     try {
-      // Convert image to Base64
       const base64Image = await RNFS.readFile(imageUri, "base64");
 
-      // Replicate API request
       const response = await fetch("https://api.replicate.com/v1/predictions", {
         method: "POST",
         headers: {
@@ -118,10 +136,9 @@ export default function FaceEnhancement() {
           Authorization: `Token ${REPLICATE_API_TOKEN}`,
         },
         body: JSON.stringify({
-          version:
-            "0fbacf7afc6c144e5be9767cff80f25aff23e52b0708f17e20f9879b2f21516c",
+          version: "0fbacf7afc6c144e5be9767cff80f25aff23e52b0708f17e20f9879b2f21516c",
           input: {
-            img: `data:image/jpeg;base64,${base64Image}`, // Send Base64 image
+            img: `data:image/jpeg;base64,${base64Image}`,
             scale: 2,
             version: "v1.4",
           },
@@ -131,25 +148,17 @@ export default function FaceEnhancement() {
       const result = await response.json();
       if (result?.error) throw new Error(result.error);
 
-      // Polling until processing is complete
       let prediction = result;
-      while (
-        prediction.status === "starting" ||
-        prediction.status === "processing"
-      ) {
+      while (prediction.status === "starting" || prediction.status === "processing") {
         await new Promise((resolve) => setTimeout(resolve, 3000));
-        const checkResponse = await fetch(
-          `https://api.replicate.com/v1/predictions/${prediction.id}`,
-          {
-            headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` },
-          }
-        );
+        const checkResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+          headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` },
+        });
         prediction = await checkResponse.json();
       }
 
       if (prediction.status === "succeeded") {
         setEnhancedImage(prediction.output);
-        // Alert.alert("Success", "Image enhanced successfully!");
       } else {
         throw new Error(`Failed with status: ${prediction.status}`);
       }
@@ -163,15 +172,8 @@ export default function FaceEnhancement() {
 
   const downloadImage = async () => {
     if (!enhancedImage) return Alert.alert("Error", "No image to download!");
-    if (!isLoggedIn) {
-      navigation.navigate('Login', {
-        redirectTo: 'FaceEnhancement',
-      });
-      return;
-    }
-    
+
     try {
-      // Request storage permission for Android 10 and below
       if (Platform.OS === "android") {
         const permission = await request(PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE);
         if (permission !== "granted") {
@@ -183,7 +185,6 @@ export default function FaceEnhancement() {
       const downloadPath = Platform.OS === "android"
         ? `${RNFS.ExternalStorageDirectoryPath}/Download/${fileName}`
         : `${RNFS.DocumentDirectoryPath}/${fileName}`;
-
 
       const downloadResult = await RNFS.downloadFile({
         fromUrl: enhancedImage,
@@ -201,12 +202,11 @@ export default function FaceEnhancement() {
     }
   };
 
-
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
       <KeyboardAvoidingView style={styles.container} behavior="padding">
         <FlatList
-          data={[{}]} // dummy data to trigger FlatList
+          data={[{}]}
           keyExtractor={(_, index) => index.toString()}
           renderItem={() => (
             <View style={{ alignItems: "center", justifyContent: "center" }}>
@@ -216,7 +216,6 @@ export default function FaceEnhancement() {
                 transparent={true}
                 visible={isModalVisible}
                 onRequestClose={() => setModalVisible(false)}
-
               >
                 <View style={styles.modalOverlay}>
                   <View style={styles.modalContentContainer}>
@@ -246,7 +245,6 @@ export default function FaceEnhancement() {
                 </View>
               )}
 
-              {/* Display the uploaded image */}
               {selectedImage && (
                 <View style={styles.imageWrapper}>
                   <Text style={styles.imageLabel}>Selected Image</Text>
@@ -263,7 +261,6 @@ export default function FaceEnhancement() {
                 />
               )}
 
-              {/* Show processing state */}
               {processing && (
                 <View style={styles.processingContainer}>
                   <ActivityIndicator size="large" color="#ffffff" />
@@ -271,8 +268,6 @@ export default function FaceEnhancement() {
                 </View>
               )}
 
-
-              {/* Show enhanced image and Download button */}
               {enhancedImage && (
                 <View style={styles.imageWrapper}>
                   <Text style={styles.imageLabel}>Result</Text>
@@ -280,18 +275,15 @@ export default function FaceEnhancement() {
                   <Btn
                     title="Download Image"
                     onPress={downloadImage}
-                  >
-                  </Btn>
+                  />
                 </View>
               )}
 
-              {/* Show Upload button only if no image is selected */}
               {!selectedImage && !processing && (
                 <Btn
                   title="Upload Image"
                   onPress={openImagePicker}
-                >
-                </Btn>
+                />
               )}
             </View>
           )}
@@ -332,21 +324,13 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(70, 71, 77, 0.85)', // Dark transparent background
+    backgroundColor: 'rgba(70, 71, 77, 0.85)', 
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContentContainer: {
-    // width: '85%',
-    // backgroundColor: '#fff',
-    // borderRadius: 20,
-    // padding: 20,
     alignItems: 'center',
     position: 'relative',
-    // elevation: 5, 
-    shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.3,
-    shadowRadius: 5,
   },
   closeButton: {
     position: 'absolute',
@@ -378,12 +362,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     marginBottom: 15,
   },
-  imageContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 10,
-  },
-
   uploadedImage: {
     width: 200,
     height: 200,

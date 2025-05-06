@@ -36,7 +36,9 @@ import {
   
         Alert.alert('Login Success', `Welcome, ${user.displayName || 'User'}!`);
         setUser(user);
-        navigation.navigate("Profile"); 
+        if (redirectTo) {
+          navigation.navigate(redirectTo);  
+        }
       })
       .catch(error => {
         const message = error?.message || 'Something went wrong';
@@ -54,11 +56,8 @@ import {
     
        
         const signInResult = await GoogleSignin.signIn();
-        console.log('Google Sign-In result:', signInResult);
-    
-      
-        let idToken = signInResult.data?.idToken || signInResult.idToken;
-        console.log('ID Token:', idToken);
+         let idToken = signInResult.data?.idToken || signInResult.idToken;
+       
     
         if (!idToken) {
           throw new Error('No ID token found');
@@ -70,10 +69,12 @@ import {
     
     
         await signInWithCredential(getAuth(), googleCredential);
-        console.log('Firebase sign-in successful.');
-    
+       
+        if (redirectTo) {
+          navigation.navigate(redirectTo); 
+        }
   
-        navigation.navigate('Profile');
+       
       } catch (error) {
         console.error('Google Sign-In error:', error);
       }
