@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback  } from "react";
 import {
   View,
   StyleSheet,
@@ -21,36 +21,26 @@ import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from '@env';
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import useDailyUsage from "../hook/useDailyUsage";
 
-export default function FaceEnhancement() {
+export default function FaceEnhancement() { 
   const [showTutorial, setShowTutorial] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [enhancedImage, setEnhancedImage] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [isModalVisible, setModalVisible] = useState(true);
   const [readyToGenerate, setReadyToGenerate] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigation = useNavigation();
-  const [hasUsedOnce, setHasUsedOnce] = useState(false);
 
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      const userLoggedIn = await AsyncStorage.getItem("isLoggedIn");
-      setIsLoggedIn(userLoggedIn === "true");
-
-      const lastUsedDate = await AsyncStorage.getItem("lastUsedDate");
-      const today = new Date().toISOString().split("T")[0];
-      if (lastUsedDate === today) {
-        setHasUsedOnce(true);
-      } else {
-        setHasUsedOnce(false);
-      }
-    };
-
-    checkLoginStatus();
-  }, []);
-
+  const guestLimit = 1;
+ const loggedInLimit = 2;
+ 
+ const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
+   "ghibli_usage_count",
+   loggedInLimit,
+   guestLimit
+ );
+ 
   const tutorialSteps = [
     {
       title: "Upload Your Image",
@@ -70,13 +60,6 @@ export default function FaceEnhancement() {
   };
 
   const openImagePicker = () => {
-    if (!isLoggedIn) {
-      navigation.navigate('Login', {
-        redirectTo: 'FaceEnhancement',
-      });
-      return;
-    }
-
     Alert.alert("Choose an Option", "Select an option to upload an image.", [
       { text: "Camera", onPress: openCamera },
       { text: "Gallery", onPress: openGallery },
@@ -84,47 +67,65 @@ export default function FaceEnhancement() {
     ]);
   };
 
+   const handleImageSelected = (uri) => {
+    setSelectedImage(uri);
+    setEnhancedImage(null);
+    setReadyToGenerate(true);
+  };
+
+
+  const checkUsage = () => {
+    if (usageCount >= limit) {
+      if (!isLoggedIn) {
+        Alert.alert(
+          "Guest Limit Reached",
+          "You’ve already used your free attempt today. Please log in to continue.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Login",
+              onPress: () =>
+                navigation.navigate("Login", { redirectTo: "FaceEnhancement" }),
+            },
+          ]
+        );
+      } else {
+        Alert.alert("Limit Reached", "You’ve already used your daily limit.");
+      }
+      return false;
+    }
+    return true;
+  };
+
   const openCamera = async () => {
     await requestPermissions();
-    if (hasUsedOnce) {
-      Alert.alert("You have already used this feature today.");
-      return;
-    }
+    const allowed = await checkUsage();
+    if (!allowed) return;
 
     launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
-        setSelectedImage(response.assets[0].uri);
-        setEnhancedImage(null);
-        setReadyToGenerate(true);
-        setHasUsedOnce(true);
-        AsyncStorage.setItem("lastUsedDate", new Date().toISOString().split("T")[0]);
+        handleImageSelected(response.assets[0].uri);
       }
     });
   };
 
   const openGallery = async () => {
     await requestPermissions();
-    if (hasUsedOnce) {
-      Alert.alert("You have already used this feature today.");
-      return;
-    }
+    const allowed = await checkUsage();
+    if (!allowed) return;
 
     launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
-        setSelectedImage(response.assets[0].uri);
-        setEnhancedImage(null);
-        setReadyToGenerate(true);
-        setHasUsedOnce(true);
-        AsyncStorage.setItem("lastUsedDate", new Date().toISOString().split("T")[0]);
+        handleImageSelected(response.assets[0].uri);
       }
     });
   };
 
   const processImage = async (imageUri) => {
     if (!imageUri) return Alert.alert("Error", "No image selected!");
+
     setProcessing(true);
     setEnhancedImage(null);
-    setSelectedImage(imageUri);
 
     try {
       const base64Image = await RNFS.readFile(imageUri, "base64");
@@ -145,26 +146,32 @@ export default function FaceEnhancement() {
         }),
       });
 
-      const result = await response.json();
-      if (result?.error) throw new Error(result.error);
+      let prediction = await response.json();
+      if (prediction?.error) throw new Error(prediction.error);
 
-      let prediction = result;
-      while (prediction.status === "starting" || prediction.status === "processing") {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        const checkResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
-          headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` },
-        });
-        prediction = await checkResponse.json();
+      while (
+        prediction.status === "starting" ||
+        prediction.status === "processing"
+      ) {
+        await new Promise((res) => setTimeout(res, 3000));
+        const pollRes = await fetch(
+          `https://api.replicate.com/v1/predictions/${prediction.id}`,
+          {
+            headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` },
+          }
+        );
+        prediction = await pollRes.json();
       }
 
       if (prediction.status === "succeeded") {
         setEnhancedImage(prediction.output);
+         incrementUsage(); 
       } else {
-        throw new Error(`Failed with status: ${prediction.status}`);
+        throw new Error("Image enhancement failed.");
       }
-    } catch (error) {
-      Alert.alert("Error", error.message || "Failed to enhance image");
-      console.error("Enhancement Error:", error);
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to enhance image");
+      console.error(err);
     } finally {
       setProcessing(false);
     }
@@ -177,30 +184,32 @@ export default function FaceEnhancement() {
       if (Platform.OS === "android") {
         const permission = await request(PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE);
         if (permission !== "granted") {
-          return Alert.alert("Permission Denied", "Storage permission is required to download images.");
+          return Alert.alert("Permission Denied", "Storage permission required.");
         }
       }
 
       const fileName = `enhanced_${Date.now()}.jpg`;
-      const downloadPath = Platform.OS === "android"
-        ? `${RNFS.ExternalStorageDirectoryPath}/Download/${fileName}`
-        : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+      const path =
+        Platform.OS === "android"
+          ? `${RNFS.DownloadDirectoryPath}/${fileName}`
+          : `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
-      const downloadResult = await RNFS.downloadFile({
+      const result = await RNFS.downloadFile({
         fromUrl: enhancedImage,
-        toFile: downloadPath,
+        toFile: path,
       }).promise;
 
-      if (downloadResult.statusCode === 200) {
-        Alert.alert("Download Complete", `Image saved to ${downloadPath}`);
+      if (result.statusCode === 200) {
+        Alert.alert("Downloaded", `Image saved to: ${path}`);
       } else {
         throw new Error("Download failed");
       }
-    } catch (error) {
-      Alert.alert("Error", error.message || "Failed to download image");
-      console.error("Download Error:", error);
+    } catch (err) {
+      Alert.alert("Error", err.message || "Download failed");
+      console.error(err);
     }
   };
+
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
