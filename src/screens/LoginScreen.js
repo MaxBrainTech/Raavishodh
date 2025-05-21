@@ -8,6 +8,8 @@ import {
     signInWithEmailAndPassword,GoogleAuthProvider,signInWithCredential,
     sendPasswordResetEmail, getAuth, updateProfile
   } from 'firebase/auth';
+  import AsyncStorage from '@react-native-async-storage/async-storage';
+
   export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -23,37 +25,48 @@ import {
     });
   }, []);
 
-    const handleLogin = () => {
-      signInWithEmailAndPassword(auth, email, password)
+  const handleLogin = () => {
+    signInWithEmailAndPassword(auth, email, password)
       .then(async userCredential => {
         const user = userCredential.user;
   
         if (!user.displayName || user.displayName.trim() === '') {
-          await updateProfile(user, {
-            
-          });
+          await updateProfile(user, {});
         }
   
         Alert.alert('Login Success', `Welcome, ${user.displayName || 'User'}!`);
         setUser(user);
+        await AsyncStorage.setItem("isLoggedIn", "true");
+  
+        const redirectTo = route.params?.redirectTo;
+   console.log("RedirectTo:", redirectTo);
+
+      setTimeout(() => {
         if (redirectTo) {
-          navigation.navigate(redirectTo);  
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'MainTabs' }, { name: redirectTo, params: { resumeAction: true } }],
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'MainTabs' }],
+          });
         }
-      })
+      }, 100);
+    })
       .catch(error => {
         const message = error?.message || 'Something went wrong';
         Alert.alert('Login Failed', message);
       });
   };
-    
+  
   
     const onGoogleButtonPress = async () => {
       try {
         await GoogleSignin.signOut();
       
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-        console.log('Google Play Services available.');
-    
        
         const signInResult = await GoogleSignin.signIn();
          let idToken = signInResult.data?.idToken || signInResult.idToken;
@@ -63,17 +76,24 @@ import {
           throw new Error('No ID token found');
         }
     
-       
-        const googleCredential = GoogleAuthProvider.credential(idToken);
-        console.log('Google Credential:', googleCredential);
-    
-    
-        await signInWithCredential(getAuth(), googleCredential);
-       
-        if (redirectTo) {
-          navigation.navigate(redirectTo); 
-        }
-  
+      const googleCredential = GoogleAuthProvider.credential(idToken);
+    const userCredential = await signInWithCredential(auth, googleCredential);
+    const user = userCredential.user;
+
+    await AsyncStorage.setItem("isLoggedIn", "true");
+
+    Alert.alert('Login Success', `Welcome, ${user.displayName || 'User'}!`);
+
+    const redirectTo = route.params?.redirectTo;
+    console.log("RedirectTo:", redirectTo);
+
+    setTimeout(() => {
+      if (redirectTo) {
+        navigation.navigate(redirectTo, { resumeAction: true });
+      } else {
+        navigation.navigate("HomeTab");
+      }
+    }, 100);
        
       } catch (error) {
         console.error('Google Sign-In error:', error);

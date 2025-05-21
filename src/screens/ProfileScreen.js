@@ -20,13 +20,23 @@ export default function ProfileScreen() {
   const [avatar, setAvatar] = useState('https://i.pravatar.cc/150');
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user) {
-      setEmail(user.email || '');
-      setName(user.displayName || '');
-      setAvatar(user.photoURL || 'https://i.pravatar.cc/150');
-    }
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        setEmail(currentUser.email || 'john.doe@example.com');
+        setName(currentUser.displayName || 'Guest');
+        setAvatar(currentUser.photoURL || 'https://i.pravatar.cc/150');
+      } else {
+        setUser(null);
+        setName('Guest'); 
+        setEmail('john.doe@example.com'); 
+        setAvatar('https://i.pravatar.cc/150');  
+      }
+    });
+  
+    return unsubscribe; 
   }, []);
+  
 
 const pickImage = () => {
   const options = {
@@ -143,9 +153,6 @@ const handleSave = () => {
   <OptionItem title="Terms " 
   icon="shield-checkmark-outline" isDarkMode={isDarkMode}
   onPress={() => navigation.navigate('Terms')} />
-  <OptionItem title="Cookies " 
-  icon="shield-checkmark-outline" isDarkMode={isDarkMode}
-  onPress={() => navigation.navigate('Cookies')} />
   <OptionItem title="Faq " 
   icon="shield-checkmark-outline" isDarkMode={isDarkMode}
   onPress={() => navigation.navigate('Faq')} />

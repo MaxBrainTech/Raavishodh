@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React, { useState ,useEffect } from "react";
 import {
   View,
   Text,
   Image,
-  Button,
   TextInput,
   ActivityIndicator,
   FlatList,
@@ -19,6 +18,9 @@ import axios from "axios";
 import { REPLICATE_API_TOKEN } from "@env";
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {auth} from "../services/Firebase";
+import { useNavigation } from "@react-navigation/native";
 
 const tutorialSteps = [
   {
@@ -35,8 +37,40 @@ export default function FaceToImage() {
   const [processing, setProcessing] = useState(false);
   const [enhancedImage, setEnhancedImage] = useState(null);
   const [isModalVisible, setModalVisible] = useState(true);
+    const [usageCount, setUsageCount] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Open image picker
+  const navigation = useNavigation();
+
+useEffect(() => {
+  const initialize = async () => {
+    const storedUsage = await AsyncStorage.getItem("faceToImageUsage");
+    const lastUsed = await AsyncStorage.getItem("faceToImageLastUsed");
+    const today = new Date().toISOString().split('T')[0];
+
+    if (lastUsed !== today) {
+      await AsyncStorage.setItem("faceToImageUsage", "0");
+      await AsyncStorage.setItem("faceToImageLastUsed", today);
+      setUsageCount(0);
+    } else {
+      setUsageCount(storedUsage ? parseInt(storedUsage) : 0);
+    }
+
+    const currentUser = auth.currentUser;
+    setIsLoggedIn(!!currentUser);
+  };
+
+  const unsubscribe = auth.onAuthStateChanged(user => {
+    setIsLoggedIn(!!user);
+  });
+
+  initialize();
+
+  return () => unsubscribe(); // Clean up on unmount
+}, []);
+
+
+ 
   const openImagePicker = async () => {
     launchImageLibrary({ mediaType: "photo", quality: 1 }, async (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
@@ -47,8 +81,30 @@ export default function FaceToImage() {
     });
   };
 
-  // Process image using Replicate API
+ 
   const processImage = async () => {
+      const limit = isLoggedIn ? 2 : 1;
+
+if (usageCount >= limit) {
+  if (!isLoggedIn) {
+    Alert.alert(
+      "Limit Reached",
+      "You’ve used your free try. Login to use one more time today.",
+      [
+        {
+          text: "Login",
+          onPress: () => navigation.navigate("Login"),
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  } else {
+    Alert.alert("Limit Reached", "You've reached your daily limit. Come back tomorrow!");
+  }
+  return;
+}
+
+
     if (!selectedImage) {
       Alert.alert("Error", "Please select an image first!");
       return;
@@ -106,6 +162,11 @@ export default function FaceToImage() {
       if (prediction.status === "succeeded") {
         if (Array.isArray(prediction.output) && prediction.output.length > 0) {
           setEnhancedImage(prediction.output);
+            const newCount = usageCount + 1;
+        setUsageCount(newCount);
+        await AsyncStorage.setItem("faceToImageUsage", newCount.toString());
+        const today = new Date().toISOString().split("T")[0];
+        await AsyncStorage.setItem("faceToImageLastUsed", today);
         } else {
           throw new Error("Invalid API response format");
         }
@@ -120,7 +181,7 @@ export default function FaceToImage() {
   };
   const downloadImage = async (imageUrl) => {
     try {
-      const fileName = `enhanced_${Date.now()}.jpg`; // you can also get extension dynamically if needed
+      const fileName = `enhanced_${Date.now()}.jpg`; 
       const downloadDest = `${RNFS.DownloadDirectoryPath}/${fileName}`;
 
       const { promise } = RNFS.downloadFile({
