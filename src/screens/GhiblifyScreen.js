@@ -1,21 +1,14 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  View,
-  Text,
-  Image,
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  ScrollView, TouchableOpacity,
-  Platform,
+  View, Text, Image, ActivityIndicator, Alert, StyleSheet, ScrollView,
+  TouchableOpacity, Platform,
 } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import LinearGradient from "react-native-linear-gradient";
-import Btn from "../component/Btn"
+import Btn from "../component/Btn";
 import axios from "axios";
-import auth from '@react-native-firebase/auth';
 import RNFS from "react-native-fs";
+import useDailyUsage from "../hook/useDailyUsage";
 import { REPLICATE_API_TOKEN } from "@env";
 
 const tutorialSteps = [
@@ -29,41 +22,67 @@ const tutorialSteps = [
 export default function GhiblifyScreen({ navigation }) {
   const [showTutorial, setShowTutorial] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [image, setImage] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [ghibliImage, setGhibliImage] = useState(null);
 
-  // Convert Android content:// URI to file path
-  const getValidImageUri = async (uri) => {
-    if (Platform.OS === "android" && uri.startsWith("content://")) {
-      const destPath = `${RNFS.TemporaryDirectoryPath}/temp_image.jpg`;
-      await RNFS.copyFile(uri, destPath);
-      return destPath;
-    }
-    return uri;
-  };
+ const guestLimit = 1;
+const loggedInLimit = 2;
 
-  // Open image picker
+const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
+  "ghibli_usage_count",
+  loggedInLimit,
+  guestLimit
+);
   const openImagePicker = async () => {
-    launchImageLibrary({ mediaType: "photo", quality: 1 }, async (response) => {
+     try {
+      const response = await launchImageLibrary({ mediaType: "photo", quality: 1 });
       if (!response.didCancel && response.assets?.length > 0) {
-        const processedUri = await getValidImageUri(response.assets[0].uri);
-        if (processedUri) {
-          setShowTutorial(false);
-          setSelectedImage(processedUri);
-        } else {
-          Alert.alert("Error", "Invalid image selected. Try again.");
-        }
+        const file = response.assets[0];
+         console.log("Selected file:", file);
+       
+        
+        setShowTutorial(false);
+        setSelectedImage(file.uri);
+      } else if (response.didCancel) {
+        console.log("User cancelled image picker");
+      } else {
+        console.log("No image selected");
       }
-    });
+    } catch (error) {
+      Alert.alert("Error", "Failed to open image picker.");
+    }
   };
 
-  // Process image using Ghiblify model
-  const processGhiblifyImage = async () => {
-    if (!selectedImage) {
-      Alert.alert("Error", "Please select an image first!");
-      return;
-    }
+const processGhiblifyImage = async () => {
+  if (!selectedImage) {
+    Alert.alert("Error", "Please select an image.");
+    return;
+  }
+
+  if (!isLoggedIn && usageCount >= guestLimit) {
+      Alert.alert(
+        "Login Required",
+        "Log in to use this feature again today.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Login",
+            onPress: () => navigation.navigate("Login", { returnTo: "Ghiblify" }),
+          },
+        ]
+      );
+        return;
+  }
+  if (isLoggedIn && usageCount >= loggedInLimit) {
+    Alert.alert("Limit Reached", "You’ve used your daily limit. Please come back tomorrow.");
+ 
+    return;
+  }
+
+  if (!selectedImage) {
+    Alert.alert("Error", "Please select an image.");
+    return;
+  }
 
     setProcessing(true);
     try {
@@ -102,7 +121,7 @@ export default function GhiblifyScreen({ navigation }) {
       let prediction = response.data;
       if (prediction?.error) throw new Error(prediction.error);
 
-      // Polling for processing status
+      
       while (
         prediction.status === "starting" ||
         prediction.status === "processing"
@@ -117,71 +136,70 @@ export default function GhiblifyScreen({ navigation }) {
         prediction = checkResponse.data;
       }
 
-      // Ensure prediction output is a string URL
-      if (prediction.status === "succeeded" && Array.isArray(prediction.output)) {
-        setGhibliImage(prediction.output[0]);
-      } else if (prediction.status === "succeeded") {
-        setGhibliImage(prediction.output);
+      if (prediction.status === "succeeded") {
+      setGhibliImage(
+          Array.isArray(prediction.output) ? prediction.output[0] : prediction.output
+        );
+        await incrementUsage();
       } else {
-        throw new Error(`Processing failed: ${prediction.status}`);
+        throw new Error("Processing failed.");
       }
-    } catch (error) {
-      Alert.alert("Error", error.message || "Image processing failed");
-      console.error("Error processing image:", error);
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to process image.");
+    } finally {
+      setProcessing(false);
     }
-    setProcessing(false);
   };
 
-  // Function to download image
-const handleDownload = () => {
-    const currentUser = auth().currentUser;
-  
-    if (!currentUser) {
-      Alert.alert(
-        "Login Required",
-        "You need to log in to download your Ghibli-style image.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Login / Sign Up",
-            onPress: () => navigation.navigate("Login", { returnTo: "Ghiblify" }),
-            // onPress:() => navigation.navigate("Login"),
-          },
-        ]
-      );
-      return;
-    }
-  
-    downloadImage(); 
-  };
-  
-
-  const downloadImage = async () => {
+ 
+  const handleDownload = () => {
     if (!ghibliImage) {
       Alert.alert("Error", "No image to download.");
       return;
     }
-  
-    const imageUrl = ghibliImage;
-    const fileName = imageUrl.split('/').pop(); // Get file name from URL
-    const filePath = `${RNFS.DownloadDirectoryPath}/${fileName}`; // Set file path to Downloads directory
-  
-    try {
-      // Download the image to the file system
-      const download = await RNFS.downloadFile({
-        fromUrl: imageUrl,
-        toFile: filePath,
-      });
-  
-      // Wait for the download to complete
-      await download.promise;
-  
-      Alert.alert("Download Complete", "Your Ghibli-style image has been saved.");
-    } catch (error) {
-      console.error("Download error:", error);
-      Alert.alert("Download Failed", "There was an issue downloading the image.");
-    }
+    downloadImage();
   };
+  
+  // const downloadImage = async () => {
+  //   if (!ghibliImage) {
+  //     Alert.alert("Error", "No image to download.");
+  //     return;
+  //   }
+  
+  //   try {
+  //     const imageUrl = ghibliImage;
+  //     const fileName = imageUrl.split("/").pop();
+  
+  //     // Use DocumentDirectoryPath (safe for all Android versions)
+  //     const downloadDir = RNFS.DocumentDirectoryPath;
+  //     const filePath = `${downloadDir}/${fileName}`;
+  
+  //     // Ensure the directory exists
+  //     const dirExists = await RNFS.exists(downloadDir);
+  //     if (!dirExists) {
+  //       await RNFS.mkdir(downloadDir);
+  //     }
+  
+  //     const download = await RNFS.downloadFile({
+  //       fromUrl: imageUrl,
+  //       toFile: filePath,
+  //     });
+  
+  //     const result = await download.promise;
+  
+  //     if (result.statusCode === 200) {
+  //       Alert.alert("Download Complete", "Image saved to app storage.");
+  //     } else {
+  //       throw new Error("Failed with status code: " + result.statusCode);
+  //     }
+  //   } catch (error) {
+  //     console.error("Download error:", error.message);
+  //     Alert.alert("Download Failed", error.message.includes('ENOENT')
+  //       ? "Storage path not found. Try again later or contact support."
+  //       : "There was an issue downloading the image.");
+  //   }
+  // };
+  
   return (
      <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -191,7 +209,7 @@ const handleDownload = () => {
           Transform your photos into stunning Ghibli-style artwork with AI.
         </Text>
 
-        {!image && showTutorial && (
+        {!selectedImage && showTutorial && (
           <View style={styles.tutorialContainer}>
             <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
             <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
@@ -314,8 +332,7 @@ const styles = StyleSheet.create({
     color: "black",
     fontSize: 14,
   },
-
-  uploadedImage: {
+   uploadedImage: {
     width: 250,
     height: 250,
     borderRadius: 10,
@@ -329,22 +346,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     width: "90%",
   },
-  tutorialTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "black",
-    marginBottom: 5,
-  },
   tutorialDescription: {
     fontSize: 14,
     color: "black",
     textAlign: "left",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#fff",
-    marginBottom: 20,
-    textAlign: 'center'
   },
   processingText: {
     marginTop: 10,
@@ -362,4 +367,3 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
 });
-
