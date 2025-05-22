@@ -1,78 +1,97 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  View,
-  StyleSheet,
-  Button,
-  Image,
-  Alert,
-  Platform,
-  ActivityIndicator,
-  Text,
-  FlatList,TouchableOpacity,
-  KeyboardAvoidingView,
+  View, Text, Image, StyleSheet,
+  FlatList, ActivityIndicator, Alert
 } from "react-native";
-import { launchImageLibrary, launchCamera } from "react-native-image-picker";
-import { request, PERMISSIONS } from "react-native-permissions";
+import { launchImageLibrary } from "react-native-image-picker";
 import LinearGradient from "react-native-linear-gradient";
 import FeatureLayout from "../component/FeatureLayout";
-import TutorialCarousel from "../component/TutorialCarousel";
-import RNFS from "react-native-fs"; // File System for Base64 conversion
+import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from "@env";
+import Btn from "../component/Btn";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+import { auth } from "../services/Firebase";
 
-export default function FaceEnhancement() {
+export default function SuperResolution() {
   const [showTutorial, setShowTutorial] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [enhancedImage, setEnhancedImage] = useState(null);
+  const [image, setImage] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [enhancedImage, setEnhancedImage] = useState(null);
+  const [user, setUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const navigation = useNavigation();
 
-  const requestPermissions = async () => {
-    if (Platform.OS === "android") {
-      await request(PERMISSIONS.ANDROID.CAMERA);
-      await request(PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE);
-    } else {
-      await request(PERMISSIONS.IOS.PHOTO_LIBRARY);
-      await request(PERMISSIONS.IOS.CAMERA);
+  const tutorialSteps = [
+    {
+      title: "Upload Your Image",
+      description:
+        "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
     }
-  };
+  ];
 
-  const openImagePicker = () => {
-    Alert.alert("Choose an Option", "Select an option to upload an image.", [
-      { text: "Camera", onPress: openCamera },
-      { text: "Gallery", onPress: openGallery },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
-
-  const openCamera = async () => {
-    await requestPermissions();
-    launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
-      if (!response.didCancel && response.assets?.length > 0) {
-        processImage(response.assets[0].uri);
-      }
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      setAuthChecked(true);
     });
-  };
+    return () => unsubscribe();
+  }, []);
 
-  const openGallery = async () => {
-    await requestPermissions();
+  const pickImage = () => {
     launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
-        processImage(response.assets[0].uri);
+        setShowTutorial(false);
+        setImage(response.assets[0].uri);
+        setEnhancedImage(null);
+      } else if (response.errorMessage) {
+        console.log("ImagePicker Error: ", response.errorMessage);
+        Alert.alert("Error", "Failed to pick an image.");
       }
     });
   };
 
-  const processImage = async (imageUri) => {
-    if (!imageUri) return Alert.alert("Error", "No image selected!");
+  const checkUsageLimit = async () => {
+    if (!authChecked) {
+      Alert.alert("Please wait", "Checking login status...");
+      return false;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const usageKey = user ? `usage_${user.uid}_${today}` : `guest_usage_${today}`;
+    const useLimit = 1;
+    const useCountStr = await AsyncStorage.getItem(usageKey);
+    const useCount = parseInt(useCountStr || '0', 10);
+
+    if (useCount >= useLimit) {
+      Alert.alert(
+        "Usage Limit Reached",
+        user
+          ? "You’ve used your 1 free attempt for today."
+          : "You’ve used your free attempt. Log in to get one more use.",
+        [
+          { text: "Cancel", style: "cancel" },
+          ...(!user ? [{ text: "Login", onPress: () => navigation.navigate("Login", { redirectTo: "SuperResolution" }) }] : []),
+        ]
+      );
+      return false;
+    }
+
+    await AsyncStorage.setItem(usageKey, (useCount + 1).toString());
+    return true;
+  };
+
+  const processImage = async () => {
+    if (!image) return Alert.alert("Error", "No image selected!");
+    const isAllowed = await checkUsageLimit();
+    if (!isAllowed) return;
+
     setProcessing(true);
     setEnhancedImage(null);
-    setSelectedImage(imageUri);
 
     try {
-      // Convert image to Base64
-      const base64Image = await RNFS.readFile(imageUri, "base64");
-      console.log("Base64 Image Length:", base64Image.length);
+      const base64Image = await RNFS.readFile(image, "base64");
 
-      // Replicate API request
       const response = await fetch("https://api.replicate.com/v1/predictions", {
         method: "POST",
         headers: {
@@ -80,28 +99,20 @@ export default function FaceEnhancement() {
           Authorization: `Token ${REPLICATE_API_TOKEN}`,
         },
         body: JSON.stringify({
-          version:
-            "f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa",
+          version: "f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa", // face enhancement model
           input: {
-            image: `data:image/jpeg;base64,${base64Image}`, // Corrected key
+            image: `data:image/jpeg;base64,${base64Image}`,
             scale: 2,
             face_enhance: true,
           },
         }),
       });
 
-      const responseText = await response.text();
-      console.log("API Response:", responseText);
-      const result = JSON.parse(responseText);
-
+      const result = await response.json();
       if (result?.error) throw new Error(result.error);
 
-      // Polling until processing is complete
       let prediction = result;
-      while (
-        prediction.status === "starting" ||
-        prediction.status === "processing"
-      ) {
+      while (prediction.status === "starting" || prediction.status === "processing") {
         await new Promise((resolve) => setTimeout(resolve, 3000));
         const checkResponse = await fetch(
           `https://api.replicate.com/v1/predictions/${prediction.id}`,
@@ -126,106 +137,83 @@ export default function FaceEnhancement() {
   };
 
   const downloadImage = async () => {
-    if (!enhancedImage) return Alert.alert("Error", "No image to download!");
+    if (!enhancedImage) {
+      Alert.alert("Error", "No image to download!");
+      return;
+    }
 
     try {
-      if (Platform.OS === "android") {
-        const permission = await request(
-          PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE
-        );
-        if (permission !== "granted") {
-          return Alert.alert(
-            "Permission Denied",
-            "Storage permission is required to download images."
-          );
-        }
-      }
-
       const fileName = `enhanced_${Date.now()}.jpg`;
-      const downloadPath =
-        Platform.OS === "android"
-          ? `${RNFS.ExternalStorageDirectoryPath}/Download/${fileName}`
-          : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+      const downloadPath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
-      const downloadResult = await RNFS.downloadFile({
+      const result = await RNFS.downloadFile({
         fromUrl: enhancedImage,
         toFile: downloadPath,
       }).promise;
 
-      if (downloadResult.statusCode === 200) {
+      if (result.statusCode === 200) {
         Alert.alert("Download Complete", `Image saved to ${downloadPath}`);
       } else {
         throw new Error("Download failed");
       }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to download image");
       console.error("Download Error:", error);
+      Alert.alert("Error", error.message || "Failed to download image");
     }
   };
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-    <KeyboardAvoidingView style={styles.container} behavior="padding">
-      <View style={{  alignItems: "center", justifyContent: "center" }}>
-        <FeatureLayout
-          title="AI Super Resolution"
-          description="Enhance facial features using our advanced AI technology."
-          operationId="face-enhancement"
-        />
+      <FlatList
+        data={[]}
+        keyExtractor={(_, index) => index.toString()}
+        ListHeaderComponent={
+          <View style={styles.container}>
+            <FeatureLayout
+              title="AI Super Resolution"
+              description="Enhance facial features using our advanced AI technology."
+            />
 
-        {!selectedImage && showTutorial && (
-          <FlatList
-            data={[
-              {
-                title: "Upload Your Image",
-                description:
-                  "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
-              },
-            ]}
-            keyExtractor={(_, index) => index.toString()}
-            renderItem={({ item }) => (
+            {!image && showTutorial && (
               <View style={styles.tutorialContainer}>
-                <TutorialCarousel
-                  steps={[item]}
-                  onClose={() => setShowTutorial(false)}
+                <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+                <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+              </View>
+            )}
+
+            {!image && <Btn title="Upload Image" onPress={pickImage} />}
+
+            {image && (
+              <View>
+                <Text style={styles.resultText}>Selected Image</Text>
+                <Image source={{ uri: image }} style={styles.image} />
+              </View>
+            )}
+
+            {image && !enhancedImage && (
+              <View style={styles.button}>
+                <Btn
+                  title="Resolute Image"
+                  onPress={processImage}
+                  disabled={processing}
                 />
               </View>
             )}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
 
-        {selectedImage && (
-          <View style={styles.imageWrapper}>
-            <Text style={styles.imageLabel}>Before</Text>
-            <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
+            {processing && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
+
+            {enhancedImage && (
+              <View>
+                <Text style={styles.resultText}>Enhanced Image</Text>
+                <Image source={{ uri: enhancedImage }} style={styles.image} />
+                <View style={styles.button}>
+                  <Btn title="Download Image" onPress={downloadImage} />
+                </View>
+              </View>
+            )}
           </View>
-        )}
-
-        {processing && (
-          <View style={styles.processingContainer}>
-            <ActivityIndicator size="large" color="#ffffff" />
-            <Text style={styles.processingText}>Processing...</Text>
-          </View>
-        )}
-
-        {enhancedImage && (
-          <View style={styles.imageWrapper}>
-            <Text style={styles.imageLabel}>After</Text>
-            <Image source={{ uri: enhancedImage }} style={styles.uploadedImage} />
-            <View style={styles.buttonContainer}>
-              <Button title="Download Image" onPress={downloadImage} color="blue" />
-            </View>
-          </View>
-        )}
-
-        {!selectedImage && !processing && (
-            <TouchableOpacity style={styles.button} onPress={openImagePicker}>
-                      <Text style={styles.buttonText}> Upload Image</Text>
-                    </TouchableOpacity>
-        )}
-      </View>
-    </KeyboardAvoidingView>
+        }
+      />
     </LinearGradient>
   );
 }
@@ -235,39 +223,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-     flex: 1, 
-     padding: 5, 
-     },
-     tutorialContainer:{
-      marginBottom:20
-     },
-  imageWrapper: {
-     alignItems: "center",
-      marginVertical: 10
-     },
-  uploadedImage: {
-     width: 200, 
-     height: 200,
-      marginTop: 30,
-       borderRadius: 10
-       },
-  button: {
-    flexDirection: "row",
-    backgroundColor: "#6a11cb",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
+    flex: 1,
+    padding: 10,
     alignItems: "center",
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
   },
-  buttonText: {
+  tutorialContainer: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  tutorialTitle: {
+    color: "black",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
+  tutorialText: {
+    color: "black",
+    fontSize: 14,
+  },
+  image: {
+    width: 200,
+    height: 200,
+    marginTop: 10,
+    borderRadius: 10,
+    marginBottom: 20,
+    alignSelf: "center",
+  },
+  loader: {
+    marginTop: 10,
+  },
+  resultText: {
     color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-    marginRight: 8,
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  button: {
+    marginVertical: 10,
   },
 });
