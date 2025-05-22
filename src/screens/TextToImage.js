@@ -6,23 +6,51 @@ import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
 import axios from "axios";
 import { REPLICATE_API_TOKEN } from '@env';
+import useDailyUsage from '../hook/useDailyUsage';
 
-export default function TextToImage() {
+
+export default function TextToImage({ navigation }) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState(null);
   const [buttonVisible, setButtonVisible] = useState(true);
-  const [generateClicked, setGenerateClicked] = useState(false); // Track if the generate button was clicked
+  const [generateClicked, setGenerateClicked] = useState(false); 
 
-  const handleGenerate = async () => {
-    if (!prompt) {
-      Alert.alert("Error", "Please enter a prompt before generating");
-      return;
-    }
+  const guestLimit = 1;
+  const loggedInLimit = 2;
+  
+  const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
+   "text_to_image_usage",
+    loggedInLimit,
+    guestLimit
+  );
 
-    setLoading(true);
-    setImageUrl(null);
-    setButtonVisible(false); // Hide the button after clicking
+const handleGenerate = async () => {
+  if (!prompt) {
+    Alert.alert("Error", "Please enter a prompt before generating");
+    return;
+  }
+ if (!isLoggedIn && usageCount >= guestLimit) {
+    Alert.alert(
+      "Login Required",
+      "Log in to use this feature again today.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Login",
+          onPress: () => navigation.navigate("Login", { returnTo: "TextToImage" }),
+        },
+      ]
+    );
+    return;
+  }
+
+  if (isLoggedIn && usageCount >= loggedInLimit) {
+    Alert.alert("Limit Reached", "You’ve used your daily limit. Come back tomorrow.");
+    return;
+  }
+
+  setLoading(true);
 
     try {
       const response = await axios.post(
@@ -76,6 +104,7 @@ export default function TextToImage() {
         if (statusResponse.data.status === "succeeded") {
           imageResult = statusResponse.data.output[0];
           setImageUrl(imageResult);
+           await incrementUsage(); 
         } else if (statusResponse.data.status === "failed") {
           throw new Error("Image generation failed.");
         }
@@ -85,12 +114,11 @@ export default function TextToImage() {
       console.error(error);
     } finally {
       setLoading(false);
-      setGenerateClicked(true); // Set generateClicked to true after the image is generated
+      setGenerateClicked(true); 
     }
   };
 
   const handleDownload = () => {
-    // Handle downloading the image (you could add logic to download to device here)
     console.log("Download the image:", imageUrl);
   };
 
