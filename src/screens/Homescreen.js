@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -6,281 +6,191 @@ import {
   ScrollView,
   StyleSheet,
   Image,
-  Animated,
-  ActivityIndicator,
+  FlatList,
 } from "react-native";
-import { Button, Card } from "react-native-paper";
 import LinearGradient from "react-native-linear-gradient";
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import Btn from "../component/Btn";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import GifCarousel from "../component/GifCarousel"
 
 const features = [
   {
     title: "Face Enhancement",
-    description: "Enhance facial features naturally using our advanced AI technology.",
     screen: "FaceEnhancement",
-    icon: "scan-circle-outline",
+    icon: "happy-outline",
   },
   {
-    title: "Ghiblify Screen",
-    description: "Transform your photos into stunning Ghibli-style artwork with the power of AI.",
+    title: "Ghiblify",
     screen: "GhiblifyScreen",
-    icon: "accessibility-outline",
-  },
-  {
-    title: "Face To Make Images",
-    description: "Make realistic images of people instantly.",
-    screen: "FaceToImage",
-    icon: "images-outline",
-  },
-  {
-    title: "Text To Image",
-    description: "Create high quality images from text descriptions using our AI model.",
-    screen: "TextToImage",
-    icon: "color-wand-outline",
-  },
-  {
-    title: "B & W Colorization",
-    description: "Bring black & white photos to life with colors.",
-    screen: "BwColourization",
     icon: "color-palette-outline",
   },
   {
-    title: "AI Super Resolution",
-    description: "Enhance image quality and resolution using advanced AI upscaling.",
-    screen: "SuperResolution",
-    icon: "scan-outline",
-  },
-  {
-    title: "Text To Image Diffusion",
-    description: "Transform text descriptions into stunning AI-generated images.",
-    screen: "TextToImageDiffusion",
+    title: "Face to Image",
+    screen: "FaceToImage",
     icon: "image-outline",
   },
   {
+    title: "Text to Image",
+    screen: "TextToImage",
+    icon: "text-outline",
+  },
+  {
+    title: "B&W Colorization",
+    screen: "BwColourization",
+    icon: "color-fill-outline",
+  },
+  {
+    title: "Super Resolution",
+    screen: "SuperResolution",
+    icon: "scan-circle-outline",
+  },
+  {
+    title: "Diffusion",
+    screen: "TextToImageDiffusion",
+    icon: "sparkles-outline",
+  },
+  {
     title: "Photo Restoration",
-    description: "Improve or restore images by deblurring, colorization, and noise removal.",
     screen: "PhotoRestoration",
-    icon: "timer-outline",
+    icon: "time-outline",
   },
 ];
 
 const Homescreen = ({ navigation }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1.02,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
   return (
-    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContainer}
-      >
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero Section */}
         <View style={styles.hero}>
-          <Text style={styles.title}>Transform Your Images with AI Magic</Text>
-          <Text style={styles.subtitle}>
-            Experience professional face enhancement and image editing powered by AI.
+          <Text style={styles.heroTitle}>Transform Your Images with AI</Text>
+          <Text style={styles.heroSubtitle}>
+            Powerful tools for enhancing and reimagining your photos.
           </Text>
-         
-<Btn
-            onPress={() => navigation.navigate("FaceEnhancement")}
-            title={"Try Face enhancement"}
-          >
-            <Image
-              source={require("../../assets/arrow-right.png")}
-              style={styles.arrowIcon}
-            />
-          </Btn>
+          {/* <Image
+            source={require("../../assets/hero-ai.png")} // Replace with a cool static image
+            style={styles.heroImage}
+          /> */}
+        </View>
+ <GifCarousel />
+        {/* Horizontal Feature Preview */}
+        <View style={styles.carouselContainer}>
+          <Text style={styles.sectionTitle}>Featured Tools</Text>
+          <FlatList
+            horizontal
+            data={features.slice(0, 4)}
+            keyExtractor={(item) => item.title}
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.featureCard}
+                onPress={() => navigation.navigate(item.screen)}
+              >
+                <Ionicons name={item.icon} size={28} color="#8ec5fc" />
+                <Text style={styles.featureText}>{item.title}</Text>
+              </TouchableOpacity>
+            )}
+          />
         </View>
 
-        {/* Section Title */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Explore All AI Features</Text>
+        {/* Grid of All Features */}
+        <Text style={[styles.sectionTitle, { marginLeft: 20 }]}>All Features</Text>
+        <View style={styles.grid}>
+          {features.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.gridCard}
+              onPress={() => navigation.navigate(item.screen)}
+            >
+              <Ionicons name={item.icon} size={30} color="#fff" />
+              <Text style={styles.gridText}>{item.title}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-
-        {/* Cards */}
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#ffffff" />
-          </View>
-        ) : (
-          features.map((feature, index) => {
-            if (index % 3 === 0) {
-              // Single Card (Full Width)
-              return (
-                <TouchableOpacity
-                  key={index}
-                  activeOpacity={0.9}
-                  onPress={() => navigation.navigate(feature.screen)}
-                  onPressIn={handlePressIn}
-                  onPressOut={handlePressOut}
-                  style={styles.cardWrapper}
-                >
-                  <Animated.View
-                    style={[
-                      styles.cardFull,
-                      { transform: [{ scale: scaleAnim }] },
-                    ]}
-                  >
-                    <Card style={styles.card}>
-                      <View style={styles.cardContent}>
-                        <Ionicons name={feature.icon} size={30} color="red" />
-                        <Text style={styles.cardTitle}>{feature.title}</Text>
-                      </View>
-                      <Text style={styles.cardDescription}>{feature.description}</Text>
-                    </Card>
-                  </Animated.View>
-                </TouchableOpacity>
-              );
-            }
-
-            if (index % 3 === 1) {
-              const second = features[index + 1];
-              return (
-                <View style={styles.rowContainer} key={index}>
-                  {[feature, second].map((item, subIndex) =>
-                    item ? (
-                      <TouchableOpacity
-                        key={subIndex}
-                        activeOpacity={0.9}
-                        onPress={() => navigation.navigate(item.screen)}
-                        onPressIn={handlePressIn}
-                        onPressOut={handlePressOut}
-                        style={styles.halfCardWrapper}
-                      >
-                        <Animated.View
-                          style={[
-                            styles.cardHalf,
-                            { transform: [{ scale: scaleAnim }] },
-                          ]}
-                        >
-                          <Card style={styles.card}>
-                            <View style={styles.cardContent}>
-                              <Ionicons name={item.icon} size={26} color="red" />
-                              <Text style={styles.cardTitle}>{item.title}</Text>
-                            </View>
-                            <Text style={styles.cardDescription}>{item.description}</Text>
-                          </Card>
-                        </Animated.View>
-                      </TouchableOpacity>
-                    ) : null
-                  )}
-                </View>
-              );
-            }
-
-            return null;
-          })
-        )}
       </ScrollView>
     </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  gradient: {
+  container: {
     flex: 1,
-  },
-  scrollContainer: {
-    paddingBottom: 30,
-    paddingTop: 20,
   },
   hero: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    padding: 20,
+    alignItems: "center",
   },
-  title: {
-    fontSize: 28,
+  heroTitle: {
+    fontSize: 26,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 10,
+    textAlign: "center",
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#eee",
-    marginBottom: 20,
+  heroSubtitle: {
+    fontSize: 15,
+    color: "#bbb",
+    textAlign: "center",
+    marginVertical: 10,
   },
-  arrowIcon: {
-    width: 20,
-    height: 20,
+  heroImage: {
+    width: 260,
+    height: 260,
+    marginTop: 10,
+    resizeMode: "contain",
   },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 10,
+  carouselContainer: {
+    marginTop: 10,
+    paddingLeft: 20,
+    marginBottom:20
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: "700",
     color: "#fff",
-  },
-  cardWrapper: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  cardFull: {
-    height: 120,
-  },
-  cardHalf: {
-    height: 180,
-    flex: 1,
-  },
-  card: {
-    backgroundColor: "rgba(13, 17, 23, 0.9)",
-    borderWidth: 2,
-    borderColor: "#8c93fb",
-    borderRadius: 16,
-    padding: 16,
-    flex: 1,
-  },
-  cardContent: {
-    flexDirection: "row",
-    alignItems: "center",
+    fontSize: 18,
+    fontWeight: "bold",
     marginBottom: 10,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#fff",
-    marginLeft: 10,
-    flex: 1,
-    flexWrap: "wrap",
-  },
-  cardDescription: {
-    fontSize: 13,
+  featureCard: {
+  backgroundColor: "#1f2937",
+  padding: 16,
+  marginRight: 14,
+  borderRadius: 16,
+  alignItems: "center",
+  width: 120,
+  borderWidth: 1,
+  borderColor: "#3b82f6", 
+},
+
+  featureText: {
     color: "#eee",
+    fontSize: 13,
+    marginTop: 6,
+    textAlign: "center",
   },
-  rowContainer: {
+  grid: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
     paddingHorizontal: 20,
-    marginBottom: 12,
+    justifyContent: "space-between",
+    paddingBottom: 50,
   },
-  halfCardWrapper: {
-    flex: 1,
-    marginHorizontal: 6,
-  },
-  loadingContainer: {
-    marginTop: 50,
-    alignItems: "center",
+  gridCard: {
+  width: "47%",
+  backgroundColor: "#223344",
+  marginBottom: 16,
+  padding: 20,
+  borderRadius: 16,
+  alignItems: "center",
+  shadowColor: "#fff", 
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.4,
+  shadowRadius: 10,
+  elevation: 30,
+   borderWidth: 5,
+  borderColor: "#fff", 
+},
+  gridText: {
+    color: "#fff",
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: "center",
   },
 });
 

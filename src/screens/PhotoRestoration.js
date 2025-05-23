@@ -1,26 +1,43 @@
 import React, { useState } from "react";
 import { 
-  View, Text, Image, Button, StyleSheet, 
+  View, Text, Image,  StyleSheet, 
   FlatList, ActivityIndicator, Alert ,TouchableOpacity
 } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
+import FeatureLayout from "../component/FeatureLayout";
 import LinearGradient from "react-native-linear-gradient";
+import { useNavigation } from '@react-navigation/native';
 import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from '@env';
-
-const tutorialSteps = [
-  {
-    title: "Upload Your Image",
-    description:
-      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
-  }
-];
+import {auth} from "../services/Firebase"
+import Btn from "../component/Btn";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import useDailyUsage from "../hook/useDailyUsage";
 
 export default function PhotoRestoration() { 
   const [showTutorial, setShowTutorial] = useState(true);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [processedImage, setProcessedImage] = useState(null);
+  const navigation = useNavigation();
+
+  const guestLimit = 1;
+   const loggedInLimit = 1;
+   
+   const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
+     "ghibli_usage_count",
+     loggedInLimit,
+     guestLimit
+   );
+   
+
+  const tutorialSteps = [
+  {
+    title: "Upload Your Image",
+    description:
+      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+  }
+];
 
   const pickImage = () => {
     launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
@@ -40,7 +57,26 @@ export default function PhotoRestoration() {
       Alert.alert("Error", "Please select an image first.");
       return;
     }
-
+ if (usageCount >= limit) {
+      if (!isLoggedIn) {
+        Alert.alert(
+          "Guest Limit Reached",
+          "You’ve already used your free attempt today. Please log in to continue.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Login",
+              onPress: () =>
+                navigation.navigate("Login", { redirectTo: "PhotoRestoration" }),
+            },
+          ]
+        );
+      } else {
+        Alert.alert("Limit Reached", "You’ve already used your daily limit.");
+      }
+     return ;
+    
+  };
     setLoading(true);
 
     try {
@@ -72,6 +108,7 @@ export default function PhotoRestoration() {
 
       if (resultUrl) {
         setProcessedImage(resultUrl);
+         incrementUsage();
       } else {
         Alert.alert("Error", "Failed to get processed image.");
       }
@@ -120,7 +157,7 @@ export default function PhotoRestoration() {
       const fileName = `processed_${Date.now()}.jpg`;
       const folderPath = `${RNFS.PicturesDirectoryPath}/PhotoRestorationApp`;
     
-    // Create folder if not exists
+    
     await RNFS.mkdir(folderPath);
     const downloadPath = `${folderPath}/${fileName}`;
 
@@ -147,10 +184,10 @@ export default function PhotoRestoration() {
       keyExtractor={(_, index) => index.toString()}
       ListHeaderComponent={
         <View style={styles.container}>
-          <Text style={styles.title}>Photo Restoration</Text> 
-          <Text style={styles.subtitle}>
-            This screen showcases another feature.
-          </Text>
+        <FeatureLayout
+                title="Photo Restoration"
+                description="Restore your Old Photos with AI"
+              />
 
           {!image && showTutorial && (
             <View style={styles.tutorialContainer}>
@@ -160,12 +197,7 @@ export default function PhotoRestoration() {
           )}
 
           {!image && (
-            // <View style={styles.button}>
-            //   <Button title="Upload Image" onPress={pickImage} color="blue" />
-            // </View>
-             <TouchableOpacity style={styles.button} onPress={pickImage}>
-                          <Text style={styles.buttonText}> Download Image</Text>
-                        </TouchableOpacity>
+            <Btn title="Upload Image" onPress={pickImage} />
           )}
 
           {image && (
@@ -177,13 +209,10 @@ export default function PhotoRestoration() {
 
           {image && !processedImage && (
             <View style={styles.button}>
-              
-               <Btn
-                            title="Generate Image"
-                            onPress={generateNewFeatureImage}
-                            disabled={loading}
-                          >
-                          </Btn>
+            <Btn title="Generate Image"
+             onPress={generateNewFeatureImage}
+              disabled={loading} />
+                         
             </View>
           )}
 
@@ -194,11 +223,9 @@ export default function PhotoRestoration() {
               <Text style={styles.resultText}>Result Image</Text>
               <Image source={{ uri: processedImage }} style={styles.image} />
              
-              <Btn
-                            title="Download Image"
-                            onPress={downloadImage}
-                          >
-                          </Btn>
+              <Btn title="Download Image"
+             onPress={downloadImage} />
+                          
             </View>
           )}
         </View>

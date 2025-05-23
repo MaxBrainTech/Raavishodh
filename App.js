@@ -106,9 +106,53 @@ function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Home' }} />
-      <Tab.Screen name="GhibliTab" component={GhibliStack} options={{ title: 'Ghibli' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Profile' }} />
+      <Tab.Screen name="HomeTab"
+       component={HomeStack}
+       options={{ title: 'Home' }}
+       listeners={({ navigation }) => ({
+          tabPress: e => {
+            const state = navigation.getState();
+            const tabRoute = state.routes.find(r => r.name === 'HomeTab')?.state;
+            if (tabRoute && tabRoute.routes.length > 1) {
+              e.preventDefault();
+              navigation.navigate('HomeTab', { screen: 'Home' });
+            }
+          },
+        })} />
+
+
+      <Tab.Screen name="GhibliTab"
+       component={GhibliStack}
+        options={{ title: 'Ghibli' }}
+          listeners={({ navigation }) => ({
+          tabPress: e => {
+            const state = navigation.getState();
+            const tabRoute = state.routes.find(r => r.name === 'GhibliTab')?.state;
+            if (tabRoute && tabRoute.routes.length > 1) {
+              e.preventDefault();
+              navigation.navigate('GhibliTab', { screen: 'GhiblifyScreen' });
+            }
+          },
+        })}
+         />
+
+
+      <Tab.Screen name="ProfileTab" 
+      component={ProfileStack} 
+      options={{ title: 'Profile' }}
+       listeners={({ navigation }) => ({
+          tabPress: e => {
+            const state = navigation.getState();
+            const tabRoute = state.routes.find(r => r.name === 'ProfileTab')?.state;
+            if (tabRoute && tabRoute.routes.length > 1) {
+              e.preventDefault();
+              navigation.navigate('ProfileTab', { screen: 'Profile' });
+            }
+          },
+        })}
+       />
+
+
     </Tab.Navigator>
   );
 }

@@ -1,37 +1,67 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
-  Button,
   Image,
   ActivityIndicator,
   Alert,
+  StyleSheet,
+  FlatList
 } from "react-native";
 import { Card } from "react-native-paper";
 import Slider from "@react-native-community/slider";
 import axios from "axios";
+import LinearGradient from "react-native-linear-gradient";
+import Btn from "../component/Btn"; 
+import useDailyUsage from "../hook/useDailyUsage";
 import { REPLICATE_API_TOKEN } from "@env";
 
-export default function TextToImageDiffusion() {
+export default function TextToImageDiffusion({ navigation }) {
   const [prompt, setPrompt] = useState("");
   const [guidanceScale, setGuidanceScale] = useState(7.5);
   const [inferenceSteps, setInferenceSteps] = useState(50);
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Function to Generate Image
+ const guestLimit = 1;
+  const loggedInLimit = 2;
+  
+  const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
+   "text_to_image_usage",
+    loggedInLimit,
+    guestLimit
+  );
+
   const generateImage = async () => {
     if (!prompt) {
       Alert.alert("Error", "Please enter a prompt.");
       return;
     }
+ if (!isLoggedIn && usageCount >= guestLimit) {
+    Alert.alert(
+      "Login Required",
+      "Log in to use this feature again today.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Login",
+          onPress: () => navigation.navigate("Login", { returnTo: "TextToImageDiffusion" }),
+        },
+      ]
+    );
+    return;
+  }
 
+  if (isLoggedIn && usageCount >= loggedInLimit) {
+    Alert.alert("Limit Reached", "You’ve used your daily limit. Come back tomorrow.");
+    return;
+  }
     setLoading(true);
-    setImageUrl(null); // Clear previous image
+    setImageUrl(null); 
 
     try {
-      // Step 1: Start the image generation process
+     
       const response = await axios.post(
         "https://api.replicate.com/v1/predictions",
         {
@@ -63,12 +93,12 @@ export default function TextToImageDiffusion() {
         return;
       }
 
-      // Step 2: Polling - Wait for the image to be ready
+     
       let prediction = response.data;
       let status = prediction.status;
 
       while (status === "starting" || status === "processing") {
-        await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         const pollResponse = await axios.get(prediction.urls.get, {
           headers: {
             Authorization: `Token ${REPLICATE_API_TOKEN}`,
@@ -79,9 +109,10 @@ export default function TextToImageDiffusion() {
         console.log("Polling status:", status);
       }
 
-      // Step 3: Display the generated image
+      
       if (prediction.output) {
         setImageUrl(prediction.output[0]);
+          incrementUsage();
       } else {
         Alert.alert("Error", "Failed to generate image.");
       }
@@ -94,61 +125,106 @@ export default function TextToImageDiffusion() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 20, backgroundColor: "#5680E9" }}>
-      <Text style={{ fontSize: 24, fontWeight: "bold", marginBottom: 10, color: "#fff" }}>
-        Text to Image Diffusion
-      </Text>
-      <Card style={{ padding: 16, marginBottom: 20 }}>
-        <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 5 }}>
-          Enter your prompt
-        </Text>
-        <TextInput
-          placeholder="Describe the image you want to generate..."
-          value={prompt}
-          onChangeText={setPrompt}
-          style={{
-            borderWidth: 1,
-            borderColor: "#ccc",
-            padding: 10,
-            borderRadius: 5,
-            marginBottom: 10,
-          }}
-        />
-        <Text style={{ fontSize: 16, fontWeight: "bold", marginTop: 10 }}>
-          Guidance Scale: {guidanceScale.toFixed(1)}
-        </Text>
-        <Slider
-          value={guidanceScale}
-          onValueChange={setGuidanceScale}
-          minimumValue={1}
-          maximumValue={20}
-          step={0.5}
-          style={{ marginBottom: 20 }}
-        />
-        <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-          Inference Steps: {inferenceSteps}
-        </Text>
-        <Slider
-          value={inferenceSteps}
-          onValueChange={setInferenceSteps}
-          minimumValue={10}
-          maximumValue={150}
-          step={1}
-          style={{ marginBottom: 20 }}
-        />
-        <Button title="Generate Image" onPress={generateImage} disabled={loading} color="blue" />
-      </Card>
+       <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+      <FlatList
+        data={[]}
+        keyExtractor={(_, index) => index.toString()}
+        ListHeaderComponent={
+          <View style={styles.container}>
+            <Text style={styles.title}>Text to Image Diffusion</Text>
 
-      {loading && (
-        <ActivityIndicator size="large" color="#fff" style={{ marginTop: 20 }} />
-      )}
+            <Card style={styles.card}>
+              <Text style={styles.label}>Enter your prompt</Text>
+              <TextInput
+                placeholder="Describe the image you want to generate..."
+                value={prompt}
+                onChangeText={setPrompt}
+                style={styles.input}
+                placeholderTextColor="#888"
+              />
+              <Text style={styles.label}>Guidance Scale: {guidanceScale.toFixed(1)}</Text>
+              <Slider
+                value={guidanceScale}
+                onValueChange={setGuidanceScale}
+                minimumValue={1}
+                maximumValue={20}
+                step={0.5}
+                style={styles.slider}
+              />
+              <Text style={styles.label}>Inference Steps: {inferenceSteps}</Text>
+              <Slider
+                value={inferenceSteps}
+                onValueChange={setInferenceSteps}
+                minimumValue={10}
+                maximumValue={150}
+                step={1}
+                style={styles.slider}
+              />
 
-      {imageUrl && (
-        <Image
-          source={{ uri: imageUrl }}
-          style={{ width: 300, height: 300, alignSelf: "center", marginTop: 20 }}
-        />
-      )}
-    </View>
+              <View style={styles.button}>
+                <Btn title="Generate Image" onPress={generateImage} disabled={loading} />
+              </View>
+            </Card>
+
+            {loading && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
+
+            {imageUrl && (
+              <Image source={{ uri: imageUrl }} style={styles.image} />
+            )}
+          </View>
+        }
+      />
+    </LinearGradient>
   );
 }
+const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
+  container: {
+    padding: 16,
+    alignItems: "center",
+  },
+  title: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  card: {
+    width: "100%",
+    padding: 16,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 5,
+    color: "#000",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    color: "#000",
+  },
+  slider: {
+    marginBottom: 20,
+  },
+  button: {
+    marginTop: 10,
+  },
+  loader: {
+    marginTop: 20,
+  },
+  image: {
+    width: 300,
+    height: 300,
+    alignSelf: "center",
+    marginTop: 20,
+    borderRadius: 10,
+  },
+});

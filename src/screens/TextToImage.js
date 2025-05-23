@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { 
-  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image 
+  View, Text, TextInput,  StyleSheet, Alert, ActivityIndicator, Image 
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";

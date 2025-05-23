@@ -1,15 +1,18 @@
 import React from "react";
 import { StyleSheet, TouchableOpacity,Text } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import PropTypes from "prop-types";
 
 const Btn =props => {
     return (
+        <LinearGradient colors={['#6EE7B7', '#3B82F6']} style={styles.gradientButton}>
 <TouchableOpacity style={styles.button}
 onPress={() => props.onPress()} >
     
     <Text style={styles.buttonText}> {props.title}</Text>
 
 </TouchableOpacity>
+</LinearGradient>
     );
 };
 
@@ -19,24 +22,21 @@ onPress={() => props.onPress()} >
  };
 
 const styles = StyleSheet.create({
-    button: {
-        flexDirection: "row",
-        backgroundColor: "#6a11cb",
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 30,
-        alignItems: "center",
-        alignSelf: "center",
-        shadowColor: "#000",
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    buttonText: {
-        color: "#fff",
-        fontWeight: "600",
-        fontSize: 16,
-        marginRight: 8,
-    },
+   gradientButton: {
+  width: 220,
+  paddingVertical: 14,
+  borderRadius: 30,
+  marginVertical: 10,
+},
+button: {
+  alignItems: 'center',
+},
+buttonText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: 'bold',
+  letterSpacing: 0.5,
+},
+
 })
 export default Btn;
