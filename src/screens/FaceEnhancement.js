@@ -234,7 +234,7 @@ export default function FaceEnhancement() {
                     </TouchableOpacity>
 
                     <FastImage
-                      source={require("../../assets/gif/face_enhancement_tool-gif.gif")}
+                      source={require("../../assets/gif/face_enhancement_tool-gif.png")}
                       style={styles.gif}
                       resizeMode={FastImage.resizeMode.contain}
                     />
@@ -325,8 +325,6 @@ const styles = StyleSheet.create({
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.3,
   shadowRadius: 4,
-  elevation: 8,
-  backdropFilter: "blur(10px)", // only for web/ios
 },
 tutorialTitle: {
   color: "#ffffff",
@@ -337,7 +335,7 @@ tutorialTitle: {
 tutorialText: {
   color: "#d1d5db",
   fontSize: 14,
-  textAlign: "center",
+  textAlign: 'left',
   lineHeight: 20,
 },
 

@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   },
   textcontainer: {
     padding: 10,
-    backgroundColor: "white",
+   backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 10,
     marginBottom: 10
   },
@@ -186,14 +186,17 @@ const styles = StyleSheet.create({
   label: {
     fontWeight: "bold",
     fontSize: 16,
-    marginBottom: 15
+    marginBottom: 15,
+      color: "#d1d5db",
   },
   input: {
     borderWidth: 1,
+     borderColor: 'rgba(255, 255, 255, 0.2)',
     padding: 10,
-    backgroundColor: "white",
+     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 5,
-    marginBottom: 10
+    marginBottom: 10,
+    
   },
   generatedImage: {
     width: 300,

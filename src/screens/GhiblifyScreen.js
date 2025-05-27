@@ -316,22 +316,32 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   tutorialContainer: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-    alignItems: "center",
-  },
-  tutorialTitle: {
-    color: "black",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  tutorialText: {
-    color: "black",
-    fontSize: 14,
-  },
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  padding: 16,
+  borderRadius: 20,
+  marginBottom: 20,
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: 'rgba(255, 255, 255, 0.2)',
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  
+  
+},
+tutorialTitle: {
+  color: "#ffffff",
+  fontSize: 20,
+  fontWeight: "600",
+  marginBottom: 8,
+},
+tutorialText: {
+  color: "#d1d5db",
+  fontSize: 14,
+  textAlign: 'left',
+  lineHeight: 20,
+},
    uploadedImage: {
     width: 250,
     height: 250,

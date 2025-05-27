@@ -194,14 +194,14 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     padding: 16,
-    backgroundColor: "#fff",
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
   },
   label: {
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 5,
-    color: "#000",
+    color: "#fff",
   },
   input: {
     borderWidth: 1,
@@ -209,7 +209,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     marginBottom: 10,
-    color: "#000",
   },
   slider: {
     marginBottom: 20,

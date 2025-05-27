@@ -11,17 +11,20 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import GifCarousel from "../component/GifCarousel"
+import AnimatedGradientBackground from "../component/AnimatedGradientBackground"
 
 const features = [
   {
     title: "Face Enhancement",
     screen: "FaceEnhancement",
     icon: "happy-outline",
+      image: require('../../assets/gif/face_enhancement_tool-gif.png'),
   },
   {
     title: "Ghiblify",
     screen: "GhiblifyScreen",
     icon: "color-palette-outline",
+     image: require('../../assets/gif/Ghibli.png'),
   },
   {
     title: "Face to Image",
@@ -32,11 +35,13 @@ const features = [
     title: "Text to Image",
     screen: "TextToImage",
     icon: "text-outline",
+      image: require('../../assets/gif/TextToImage.png'),
   },
   {
     title: "B&W Colorization",
     screen: "BwColourization",
     icon: "color-fill-outline",
+    image: require('../../assets/gif/B&W.png'),
   },
   {
     title: "Super Resolution",
@@ -59,19 +64,17 @@ const Homescreen = ({ navigation }) => {
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Hero Section */}
+     
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>Transform Your Images with AI</Text>
           <Text style={styles.heroSubtitle}>
             Powerful tools for enhancing and reimagining your photos.
           </Text>
-          {/* <Image
-            source={require("../../assets/hero-ai.png")} // Replace with a cool static image
-            style={styles.heroImage}
-          /> */}
         </View>
+
  <GifCarousel />
-        {/* Horizontal Feature Preview */}
+
+      <AnimatedGradientBackground>
         <View style={styles.carouselContainer}>
           <Text style={styles.sectionTitle}>Featured Tools</Text>
           <FlatList
@@ -90,8 +93,8 @@ const Homescreen = ({ navigation }) => {
             )}
           />
         </View>
-
-        {/* Grid of All Features */}
+</AnimatedGradientBackground>
+  
         <Text style={[styles.sectionTitle, { marginLeft: 20 }]}>All Features</Text>
         <View style={styles.grid}>
           {features.map((item, index) => (
@@ -100,7 +103,12 @@ const Homescreen = ({ navigation }) => {
               style={styles.gridCard}
               onPress={() => navigation.navigate(item.screen)}
             >
-              <Ionicons name={item.icon} size={30} color="#fff" />
+                 <Image
+        source={item.image}
+        style={styles.gridImage}
+        resizeMode="cover"
+      />
+              {/* <Ionicons name={item.icon} size={30} color="#fff" /> */}
               <Text style={styles.gridText}>{item.title}</Text>
             </TouchableOpacity>
           ))}
@@ -136,11 +144,18 @@ const styles = StyleSheet.create({
     marginTop: 10,
     resizeMode: "contain",
   },
-  carouselContainer: {
-    marginTop: 10,
-    paddingLeft: 20,
-    marginBottom:20
-  },
+ carouselContainer: {
+  marginTop: 10,
+  paddingLeft: 20,
+  paddingTop: 20,
+  paddingBottom: 20,
+  marginBottom: 20,
+  // backgroundColor: 'red',
+  borderRadius: 12,
+  overflow: 'hidden', // Ensures animation stays inside
+  position: 'relative', // Needed for absolute overlay
+},
+
   sectionTitle: {
     color: "#fff",
     fontSize: 18,
@@ -173,18 +188,20 @@ const styles = StyleSheet.create({
   },
   gridCard: {
   width: "47%",
-  backgroundColor: "#223344",
+  height:250,
+  backgroundColor: "rgba(3, 7, 26, 0.1)",
   marginBottom: 16,
   padding: 20,
   borderRadius: 16,
   alignItems: "center",
   shadowColor: "#fff", 
   shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.4,
-  shadowRadius: 10,
-  elevation: 30,
-   borderWidth: 5,
-  borderColor: "#fff", 
+  // shadowOpacity: 0.4,
+  // shadowRadius: 10,
+  // elevation: 30,
+   borderWidth: 2,
+  borderColor: "rgba(123, 127, 150, 0.82)",
+  // overflow: 'hidden' 
 },
   gridText: {
     color: "#fff",
@@ -192,6 +209,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
   },
+  gridImage: {
+  width: '100%',
+  height: 150,
+  borderTopLeftRadius: 12,
+  borderTopRightRadius: 12,
+},
 });
 
 export default Homescreen;

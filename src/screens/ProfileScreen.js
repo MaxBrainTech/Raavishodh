@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, useColorScheme, Alert } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import Animated, { FadeInRight } from 'react-native-reanimated';
+import Animated, { FadeInRight ,ZoomIn} from 'react-native-reanimated';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from "react-native-linear-gradient";
@@ -175,15 +175,15 @@ const handleSave = () => {
 const OptionItem = ({ title, icon, isDarkMode, onPress }) => {
   return (
 
-    <Animated.View entering={FadeInRight.duration(500)}>
+    <Animated.View entering={ZoomIn.duration(2000)}>
       <TouchableOpacity style={styles.optionItem} onPress={onPress}>
         <Ionicons
           name={icon}
           size={24}
-          color={isDarkMode ? '#fff' : '#000'}
+          color={isDarkMode ? '#fff' : '#38BDF8'}
           style={styles.optionIcon}
         />
-        <Text style={[styles.optionText, { color: isDarkMode ? '#fff' : '#000' }]}>{title}</Text>
+        <Text style={[styles.optionText, { color: isDarkMode ? '#fff' : '#fff' }]}>{title}</Text>
       </TouchableOpacity>
     </Animated.View>
 
@@ -284,9 +284,13 @@ const styles = StyleSheet.create({
   },
   optionIcon: {
     marginRight: 15,
+    backgroundColor: "#BBBBBB",
+    borderRadius:100,
+    padding:5
+
   },
   optionText: {
-    fontSize: 17,
+    fontSize: 14,
     fontWeight: '500',
   },
   logoutButton: {

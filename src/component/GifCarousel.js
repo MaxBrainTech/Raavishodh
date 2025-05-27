@@ -7,28 +7,34 @@ const { width } = Dimensions.get('window');
 const gifs = [
   {
     key: 'face',
-    source: require('../../assets/gif/FacetoImage.gif'),
+    source: require('../../assets/carousel/faceenhancement.png'),
     label: 'Enhance Face',
-    screen: 'FaceEnhanceScreen',
+    screen: 'FaceEnhancement',
   },
   {
     key: 'ghibli',
-    // source: require('../assets/gifs/ghiblify.gif'),
+    source: require('../../assets/carousel/ghibli.png'),
     label: 'Ghiblify',
-    screen: 'GhibliScreen',
+    screen: 'GhiblifyScreen',
   },
   {
     key: 'colorize',
-    // source: require('../assets/gifs/colorizer.gif'),
+    source: require('../../assets/carousel/b&w.png'),
     label: 'Colorize B&W',
-    screen: 'ColorizeScreen',
+    screen: 'BwColourization',
   },
   {
     key: 'diffusion',
-    // source: require('../assets/gifs/text2img.gif'),
+    source: require('../../assets/carousel/text-image.png'),
     label: 'Text to Image',
-    screen: 'Text2ImageScreen',
+    screen: 'TextToImage',
   },
+  {
+    key: 'restoration',
+    source: require('../../assets/carousel/photorestoration.png'),
+    label: 'Photo Restoration',
+    screen: 'PhotoRestoration',
+  }
 ];
 
 const GifCarousel = () => {
@@ -65,13 +71,13 @@ const GifCarousel = () => {
         ref={scrollViewRef}
         horizontal
         pagingEnabled
-        scrollEnabled={false}
+        scrollEnabled={true}
         showsHorizontalScrollIndicator={false}
       >
         {gifs.map((item, i) => (
           <TouchableOpacity key={item.key} onPress={() => handlePress(item.screen)}>
             <View style={styles.card}>
-              <Image source={item.source} style={styles.gif} resizeMode="cover" />
+              <Image source={item.source} style={styles.gif} resizeMode='stretch' />
               <Text style={styles.label}>{item.label}</Text>
             </View>
           </TouchableOpacity>
@@ -96,6 +102,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+    
   },
   label: {
     marginTop: 8,
