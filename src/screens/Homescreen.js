@@ -47,6 +47,7 @@ const features = [
     title: "Super Resolution",
     screen: "SuperResolution",
     icon: "scan-circle-outline",
+      image: require('../../assets/gif/superResolution.png'),
   },
   {
     title: "Diffusion",
@@ -57,6 +58,7 @@ const features = [
     title: "Photo Restoration",
     screen: "PhotoRestoration",
     icon: "time-outline",
+     image: require('../../assets/gif/PhotoRestoration.png'),
   },
 ];
 

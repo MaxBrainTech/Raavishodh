@@ -144,7 +144,8 @@ const handleSave = () => {
 
 <View style={styles.optionsContainer}>
   <OptionItem title="Change Password" 
-  icon="lock-closed-outline" isDarkMode={isDarkMode} />
+  icon="lock-closed-outline" isDarkMode={isDarkMode}
+   onPress={() => navigation.navigate('ChangePasswordScreen')} />
   <OptionItem title="Notifications" 
   icon="notifications-outline" isDarkMode={isDarkMode} />
   <OptionItem title="Privacy Policy" 

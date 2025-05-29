@@ -22,6 +22,7 @@ import EditProfileScreen from './src/screens/EditProfileScreen';
 import PrivacySetting from './src/screens/PrivacySetting';
 import Terms from './src/screens/Terms';
 import Faq from './src/screens/Faq';
+import ChangePasswordScreen from './src/screens/ChangePasswordScreen'
 import PhotoRestoration from './src/screens/PhotoRestoration';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
@@ -73,6 +74,7 @@ function ProfileStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Profile" component={ProfileScreen}  />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen}  />
+      <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen}  />
       <Stack.Screen name="PrivacySetting" component={PrivacySetting}  />
       <Stack.Screen name="Terms" component={Terms}  />
      <Stack.Screen name="Faq" component={Faq} />
