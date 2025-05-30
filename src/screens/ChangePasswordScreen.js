@@ -1,80 +1,92 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, useColorScheme } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { auth } from '../services/Firebase';
-import LinearGradient from 'react-native-linear-gradient';
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+  signOut,
+} from 'firebase/auth';
+import { LinearGradient } from 'react-native-linear-gradient';
 
 export default function ChangePasswordScreen() {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
-
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  const reauthenticate = async (currentPassword) => {
-    const user = auth.currentUser;
-    const cred = auth.EmailAuthProvider.credential(user.email, currentPassword);
-    return await user.reauthenticateWithCredential(cred);
-  };
+  const navigation = useNavigation();
 
   const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill all fields.');
-      return;
-    }
-
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match.');
+      Alert.alert('Error', 'New passwords do not match');
       return;
     }
 
-    try {
-      await reauthenticate(currentPassword);
-      await auth.currentUser.updatePassword(newPassword);
-      Alert.alert('Success', 'Password changed successfully!');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (error) {
-      console.error('Password change error:', error);
-      Alert.alert('Error', error.message);
+    const user = auth.currentUser;
+
+    if (user && user.email) {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+
+      try {
+      
+        await reauthenticateWithCredential(user, credential);
+     
+        await updatePassword(user, newPassword);
+
+       
+        await signOut(auth);
+        Alert.alert('Success', 'Password changed successfully! Please log in again.');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Profile' }],
+        });
+      } catch (error) {
+        Alert.alert('Error', error.message);
+      }
+    } else {
+      Alert.alert('Error', 'No user is currently logged in');
     }
   };
 
   return (
-    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+    <LinearGradient
+      colors={['#0d1117', '#8ec5fc']}
+      style={styles.gradient}
+    >
       <View style={styles.container}>
-        <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#000' }]}>Change Password</Text>
-
+        <Text style={styles.label}>Current Password</Text>
         <TextInput
-          style={[styles.input, { color: isDarkMode ? '#fff' : '#000' }]}
+          style={styles.input}
           secureTextEntry
-          placeholder="Current Password"
-          placeholderTextColor={isDarkMode ? '#666' : '#aaa'}
           value={currentPassword}
           onChangeText={setCurrentPassword}
         />
 
+        <Text style={styles.label}>New Password</Text>
         <TextInput
-          style={[styles.input, { color: isDarkMode ? '#fff' : '#000' }]}
+          style={styles.input}
           secureTextEntry
-          placeholder="New Password"
-          placeholderTextColor={isDarkMode ? '#666' : '#aaa'}
           value={newPassword}
           onChangeText={setNewPassword}
         />
 
+        <Text style={styles.label}>Confirm New Password</Text>
         <TextInput
-          style={[styles.input, { color: isDarkMode ? '#fff' : '#000' }]}
+          style={styles.input}
           secureTextEntry
-          placeholder="Confirm New Password"
-          placeholderTextColor={isDarkMode ? '#666' : '#aaa'}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
         />
 
         <TouchableOpacity style={styles.button} onPress={handleChangePassword}>
-          <Text style={styles.buttonText}>Update Password</Text>
+          <Text style={styles.buttonText}>Change Password</Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -86,31 +98,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-    flex: 1,
     padding: 20,
+    flex: 1,
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 20,
-    textAlign: 'center',
+  label: {
+    marginBottom: 5,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
+    backgroundColor: '#ffffffcc',
     padding: 12,
-    fontSize: 16,
-    marginVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    marginBottom: 15,
   },
   button: {
     backgroundColor: '#10b981',
-    paddingVertical: 14,
-    borderRadius: 30,
-    marginTop: 20,
+    padding: 15,
+    borderRadius: 25,
     alignItems: 'center',
+    marginTop: 10,
   },
   buttonText: {
     color: '#fff',

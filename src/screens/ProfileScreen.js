@@ -25,7 +25,7 @@ export default function ProfileScreen() {
         setUser(currentUser);
         setEmail(currentUser.email || 'john.doe@example.com');
         setName(currentUser.displayName || 'Guest');
-        setAvatar(currentUser.photoURL || 'https://i.pravatar.cc/150');
+        setAvatar(currentUser.photoURL || '');
       } else {
         setUser(null);
         setName('Guest'); 
@@ -99,14 +99,19 @@ const handleSave = () => {
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <ScrollView contentContainerStyle={styles.container}>
 <Animated.View style={styles.profileContainer} entering={FadeInRight.duration(800)}>
-  <TouchableOpacity onPress={isEditing ? pickImage : undefined}>
+ <TouchableOpacity onPress={isEditing ? pickImage : undefined}>
+  {avatar ? (
     <Image source={{ uri: avatar }} style={styles.avatar} />
-    {isEditing && (
-      <View style={styles.editPhotoOverlay}>
-        <Ionicons name="camera-outline" size={24} color="#fff" />
-      </View>
-    )}
-  </TouchableOpacity>
+  ) : (
+    user ? null : <Image source={{ uri: 'https://i.pravatar.cc/150' }} style={styles.avatar} />
+  )}
+  {isEditing && (
+    <View style={styles.editPhotoOverlay}>
+      <Ionicons name="camera-outline" size={24} color="#fff" />
+    </View>
+  )}
+</TouchableOpacity>
+
 
   {isEditing ? (
     <>
@@ -146,8 +151,8 @@ const handleSave = () => {
   <OptionItem title="Change Password" 
   icon="lock-closed-outline" isDarkMode={isDarkMode}
    onPress={() => navigation.navigate('ChangePasswordScreen')} />
-  <OptionItem title="Notifications" 
-  icon="notifications-outline" isDarkMode={isDarkMode} />
+  {/* <OptionItem title="Notifications" 
+  icon="notifications-outline" isDarkMode={isDarkMode} /> */}
   <OptionItem title="Privacy Policy" 
   icon="shield-checkmark-outline" isDarkMode={isDarkMode}
   onPress={() => navigation.navigate('PrivacySetting')} />

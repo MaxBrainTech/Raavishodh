@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import LinearGradient from 'react-native-linear-gradient'; // <--- added this
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function FAQScreen() {
   const colorScheme = useColorScheme();
@@ -52,7 +52,7 @@ export default function FAQScreen() {
   };
 
   return (
-    <LinearGradient colors={['#6a11cb', '#2575fc']} style={styles.container}>
+    <LinearGradient colors={['#0d1117', '#8ec5fc']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <Text style={styles.header}>
           Frequently Asked Questions

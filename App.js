@@ -6,6 +6,7 @@ import { StyleSheet, Platform } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {  onAuthStateChanged } from 'firebase/auth';
+import { auth } from './src/services/Firebase';
 
 import SplashScreen from './src/screens/SplashScreen';
 import HomeScreen from './src/screens/Homescreen';
@@ -26,7 +27,7 @@ import ChangePasswordScreen from './src/screens/ChangePasswordScreen'
 import PhotoRestoration from './src/screens/PhotoRestoration';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
-import { auth } from './src/services/Firebase';
+
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
