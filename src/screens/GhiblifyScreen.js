@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, Image, ActivityIndicator, Alert, StyleSheet, ScrollView,
+  View, Text, Image, ActivityIndicator, Alert, StyleSheet, ScrollView,Modal,
   TouchableOpacity, Platform,
 } from "react-native";
+import FastImage from 'react-native-fast-image';
 import { launchImageLibrary } from "react-native-image-picker";
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
@@ -24,6 +25,7 @@ export default function GhiblifyScreen({ navigation }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [ghibliImage, setGhibliImage] = useState(null);
+   const [isModalVisible, setModalVisible] = useState(true);
 
  const guestLimit = 1;
 const loggedInLimit = 2;
@@ -203,6 +205,27 @@ const processGhiblifyImage = async () => {
   return (
      <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
     <ScrollView contentContainerStyle={styles.scrollContainer}>
+       <Modal
+                      animationType="slide"
+                      transparent={true}
+                      visible={isModalVisible}
+                      onRequestClose={() => setModalVisible(false)}
+                    >
+                      <View style={styles.modalOverlay}>
+                        <View style={styles.modalContentContainer}>
+                          <TouchableOpacity style={styles.closeButton}
+                            onPress={() => setModalVisible(false)}>
+                            <Text style={styles.closeButtonText}>X</Text>
+                          </TouchableOpacity>
+      
+                          <FastImage
+                            source={require("../../assets/gif/Ghibli.png")}
+                            style={styles.gif}
+                            resizeMode={FastImage.resizeMode.contain}
+                          />
+                        </View>
+                      </View>
+                    </Modal>
       <View style={styles.container}>
         <Text style={styles.title}>Ghiblify Your Image</Text>
         <Text style={styles.subtitle}>
@@ -284,6 +307,44 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
+    modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(70, 71, 77, 0.85)', 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+ modalContentContainer: {
+  backgroundColor: "rgba(255,255,255,0.05)",
+  padding: 20,
+  borderRadius: 25,
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.2)",
+},
+closeButton: {
+  position: 'absolute',
+  top: 10,
+  right: 10,
+  backgroundColor: '#222',
+  borderRadius: 16,
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  zIndex: 10,
+  shadowColor: '#000',
+  shadowOpacity: 0.25,
+  shadowRadius: 6,
+  elevation: 5,
+},
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  gif: {
+  width: 260,
+  height: 260,
+  borderRadius: 20,
+},
   title: {
     color: "#fff",
     fontSize: 24,
