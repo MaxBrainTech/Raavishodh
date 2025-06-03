@@ -30,6 +30,7 @@ const features = [
     title: "Face to Image",
     screen: "FaceToImage",
     icon: "image-outline",
+     image: require('../../assets/gif/face-image.png'),
   },
   {
     title: "Text to Image",
@@ -53,6 +54,7 @@ const features = [
     title: "Diffusion",
     screen: "TextToImageDiffusion",
     icon: "sparkles-outline",
+    image: require('../../assets/gif/StableDiffusion.png'),
   },
   {
     title: "Photo Restoration",
