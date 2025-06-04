@@ -12,6 +12,8 @@ import { REPLICATE_API_TOKEN } from '@env';
 import Btn from "../component/Btn";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { downloadImageFile } from "../utils/downloadImage";
+import useUsageGuard from "../hook/useUsageGuard";
 import {auth} from "../services/Firebase"
 
 export default function BwColourization() {
@@ -41,63 +43,52 @@ useEffect(() => {
 
   return () => unsubscribe();
 }, []);
+const {
+  usageCount,
+  incrementUsage,
+  checkUsage,
+} = useUsageGuard("ghibli_usage_count");
 
-  const pickImage = () => {
-    launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
+
+  const openImagePicker = () => {
+    Alert.alert("Choose an Option", "Select an option to upload an image.", [
+      { text: "Camera", onPress: openCamera },
+      { text: "Gallery", onPress: openGallery },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const openCamera = async () => {
+    if (!checkUsage()) return;
+    launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
-        setShowTutorial(false);
-        setImage(response.assets[0].uri);
-        setProcessedImage(null);
-      } else if (response.errorMessage) {
-        console.log("ImagePicker Error: ", response.errorMessage);
-        Alert.alert("Error", "Failed to pick an image.");
+        handleImageSelected(response.assets[0].uri);
       }
     });
   };
 
-  
-  const checkUsageLimit = async () => {
-   if (!authChecked) {
-  Alert.alert("Please wait", "Checking login status...");
-  return false;
-}
-  const today = new Date().toISOString().split('T')[0];
-  const usageKey = user ? `usage_${user.uid}_${today}` : `guest_usage_${today}`;
-  const useLimit = user ? 1 : 1;
-  const useCountStr = await AsyncStorage.getItem(usageKey);
-  const useCount = parseInt(useCountStr || '0', 10);
-
- console.log(`Checking usage: key=${usageKey}, count=${useCount}, limit=${useLimit}`);
-
-    if (useCount >= useLimit) {
-    Alert.alert(
-  "Usage Limit Reached",
-  user
-    ? "You’ve used your 1 free attempts for today."
-    : "You’ve used your free attempt for today. Please log in to get one more use.",
-  [
-    { text: "Cancel", style: "cancel" },
-    ...(!user ? [{ text: "Login", onPress: () => navigation.navigate("Login", { redirectTo: "BwColourization" }) }] : []),
-  ]
-);
-
-      return false;
-    }
-
-    await AsyncStorage.setItem(usageKey, (useCount + 1).toString());
-    return true;
+  const openGallery = async () => {
+    if (!checkUsage()) return;
+    launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
+      if (!response.didCancel && response.assets?.length > 0) {
+        handleImageSelected(response.assets[0].uri);
+      }
+    });
   };
 
+  const handleImageSelected = (uri) => {
+    setImage(uri);
+    setProcessedImage(null);
+    setShowTutorial(false);
+  };
+
+ 
   const generateColorizedImage = async () => {
     if (!image) {
       Alert.alert("Error", "Please select an image first.");
       return;
     }
 
-    const isAllowed = await checkUsageLimit();
-    if (!isAllowed) {
-      return;  // If usage limit is reached, stop further execution
-    }
     setLoading(true);
 
     try {
@@ -164,31 +155,14 @@ useEffect(() => {
     }
   };
 
-  const downloadImage = async () => {
-    if (!processedImage) {
-      Alert.alert("Error", "No image to download!");
-      return;
-    }
-
-    try {
-      const fileName = `colorized_${Date.now()}.jpg`;
-      const downloadPath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
-
-      const downloadResult = await RNFS.downloadFile({
-        fromUrl: processedImage,
-        toFile: downloadPath,
-      }).promise;
-
-      if (downloadResult.statusCode === 200) {
-        Alert.alert("Download Complete", `Image saved to ${downloadPath}`);
-      } else {
-        throw new Error("Download failed");
-      }
-    } catch (error) {
-      console.error("Download Error:", error);
-      Alert.alert("Error", error.message || "Failed to download image");
-    }
-  };
+const downloadImage = async () => {
+  if (!processedImage) {
+    Alert.alert("Error", "No image to download!");
+    return;
+  }
+  
+  await downloadImageFile(processedImage, "colorized");
+};
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
@@ -234,7 +208,7 @@ useEffect(() => {
             {!image && (
               <Btn
                 title="Upload Image"
-                onPress={pickImage}>
+                onPress={openImagePicker}>
               </Btn>
             )}
 
@@ -364,6 +338,7 @@ tutorialText: {
     borderRadius: 10,
     marginBottom: 20,
     alignSelf: "center",
+    resizeMode:'contain'
   },
 
   loader: {
@@ -375,5 +350,6 @@ tutorialText: {
     fontWeight: "bold",
     marginTop: 10,
     marginBottom: 5,
+    alignSelf:'center'
   },
 });

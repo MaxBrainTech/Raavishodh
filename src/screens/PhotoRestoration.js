@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { 
-  View, Text, Image,  StyleSheet, 
-  FlatList, ActivityIndicator, Alert ,Modal,TouchableOpacity
+import {
+  View, Text, Image, StyleSheet,
+  FlatList, ActivityIndicator, Alert, Modal, TouchableOpacity
 } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import FastImage from 'react-native-fast-image';
@@ -10,12 +10,13 @@ import LinearGradient from "react-native-linear-gradient";
 import { useNavigation } from '@react-navigation/native';
 import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from '@env';
-import {auth} from "../services/Firebase"
+import { auth } from "../services/Firebase"
+import { downloadImageFile } from "../utils/downloadImage";
+import useUsageGuard from "../hook/useUsageGuard";
 import Btn from "../component/Btn";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import useDailyUsage from "../hook/useDailyUsage";
 
-export default function PhotoRestoration() { 
+
+export default function PhotoRestoration() {
   const [showTutorial, setShowTutorial] = useState(true);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -23,62 +24,62 @@ export default function PhotoRestoration() {
   const [isModalVisible, setModalVisible] = useState(true);
   const navigation = useNavigation();
 
-  const guestLimit = 1;
-   const loggedInLimit = 1;
-   
-   const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
-     "ghibli_usage_count",
-     loggedInLimit,
-     guestLimit
-   );
-   
+
 
   const tutorialSteps = [
-  {
-    title: "Upload Your Image",
-    description:
-      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
-  }
-];
+    {
+      title: "Upload Your Image",
+      description:
+        "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+    }
+  ];
 
-  const pickImage = () => {
-    launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
+  const {
+    usageCount,
+    incrementUsage,
+    checkUsage,
+  } = useUsageGuard("ghibli_usage_count");
+
+
+  const openImagePicker = () => {
+    Alert.alert("Choose an Option", "Select an option to upload an image.", [
+      { text: "Camera", onPress: openCamera },
+      { text: "Gallery", onPress: openGallery },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const openCamera = async () => {
+    if (!checkUsage()) return;
+    launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
-        setShowTutorial(false);
-        setImage(response.assets[0].uri);
-        setProcessedImage(null);
-      } else if (response.errorMessage) {
-        console.log("ImagePicker Error: ", response.errorMessage);
-        Alert.alert("Error", "Failed to pick an image.");
+        handleImageSelected(response.assets[0].uri);
       }
     });
   };
+
+  const openGallery = async () => {
+    if (!checkUsage()) return;
+    launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
+      if (!response.didCancel && response.assets?.length > 0) {
+        handleImageSelected(response.assets[0].uri);
+      }
+    });
+  };
+
+  const handleImageSelected = (uri) => {
+    setImage(uri);
+    setProcessedImage(null);
+    setShowTutorial(false);
+  };
+
 
   const generateNewFeatureImage = async () => {
     if (!image) {
       Alert.alert("Error", "Please select an image first.");
       return;
     }
- if (usageCount >= limit) {
-      if (!isLoggedIn) {
-        Alert.alert(
-          "Guest Limit Reached",
-          "You’ve already used your free attempt today. Please log in to continue.",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Login",
-              onPress: () =>
-                navigation.navigate("Login", { redirectTo: "PhotoRestoration" }),
-            },
-          ]
-        );
-      } else {
-        Alert.alert("Limit Reached", "You’ve already used your daily limit.");
-      }
-     return ;
-    
-  };
+
     setLoading(true);
 
     try {
@@ -90,13 +91,13 @@ export default function PhotoRestoration() {
           Authorization: `Token ${REPLICATE_API_TOKEN}`,
         },
         body: JSON.stringify({
-          version: "cc4956dd26fa5a7185d5660cc9100fab1b8070a1d1654a8bb5eb6d443b020bb2", 
+          version: "cc4956dd26fa5a7185d5660cc9100fab1b8070a1d1654a8bb5eb6d443b020bb2",
           input: {
             image: `data:image/jpeg;base64,${base64Image}`,
             upscale: 2,
-      face_upsample: true,
-      background_enhance: true,
-      codeformer_fidelity: 0.1
+            face_upsample: true,
+            background_enhance: true,
+            codeformer_fidelity: 0.1
           },
         }),
       });
@@ -110,7 +111,7 @@ export default function PhotoRestoration() {
 
       if (resultUrl) {
         setProcessedImage(resultUrl);
-         incrementUsage();
+        incrementUsage();
       } else {
         Alert.alert("Error", "Failed to get processed image.");
       }
@@ -149,111 +150,89 @@ export default function PhotoRestoration() {
     }
   };
 
-  const downloadImage = async () => {
-    if (!processedImage) {
-      Alert.alert("Error", "No image to download!");
-      return;
-    }
+const downloadImage = async () => {
+  if (!processedImage) {
+    Alert.alert("Error", "No image to download!");
+    return;
+  }
 
-    try {
-      const fileName = `processed_${Date.now()}.jpg`;
-      const folderPath = `${RNFS.PicturesDirectoryPath}/PhotoRestorationApp`;
-    
-    
-    await RNFS.mkdir(folderPath);
-    const downloadPath = `${folderPath}/${fileName}`;
-
-      const downloadResult = await RNFS.downloadFile({
-        fromUrl: processedImage,
-        toFile: downloadPath,
-      }).promise;
-
-      if (downloadResult.statusCode === 200) {
-        Alert.alert("Download Complete", `Image saved to ${downloadPath}`);
-      } else {
-        throw new Error("Download failed");
-      }
-    } catch (error) {
-      console.error("Download Error:", error);
-      Alert.alert("Error", error.message || "Failed to download image");
-    }
-  };
-
+  await downloadImageFile(processedImage, "restored");
+};
   return (
-     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-       <Modal
-                                  animationType="slide"
-                                  transparent={true}
-                                  visible={isModalVisible}
-                                  onRequestClose={() => setModalVisible(false)}
-                                >
-                                  <View style={styles.modalOverlay}>
-                                    <View style={styles.modalContentContainer}>
-                                      <TouchableOpacity style={styles.closeButton}
-                                        onPress={() => setModalVisible(false)}>
-                                        <Text style={styles.closeButtonText}>X</Text>
-                                      </TouchableOpacity>
-                  
-                                      <FastImage
-                                        source={require("../../assets/gif/superResolution.png")}
-                                        style={styles.gif}
-                                        resizeMode={FastImage.resizeMode.contain}
-                                      />
-                                    </View>
-                                  </View>
-                                </Modal>
-    <FlatList
-      data={[]}
-      keyExtractor={(_, index) => index.toString()}
-      ListHeaderComponent={
-        <View style={styles.container}>
-        <FeatureLayout
-                title="Photo Restoration"
-                description="Restore your Old Photos with AI"
-              />
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContentContainer}>
+            <TouchableOpacity style={styles.closeButton}
+              onPress={() => setModalVisible(false)}>
+              <Text style={styles.closeButtonText}>X</Text>
+            </TouchableOpacity>
 
-          {!image && showTutorial && (
-            <View style={styles.tutorialContainer}>
-              <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
-              <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
-            </View>
-          )}
-
-          {!image && (
-            <Btn title="Upload Image" onPress={pickImage} />
-          )}
-
-          {image && (
-            <View>
-              <Text style={styles.resultText}>Selected Image</Text>
-              <Image source={{ uri: image }} style={styles.image} />
-            </View>
-          )}
-
-          {image && !processedImage && (
-            <View style={styles.button}>
-            <Btn title="Generate Image"
-             onPress={generateNewFeatureImage}
-              disabled={loading} />
-                         
-            </View>
-          )}
-
-          {loading && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
-
-          {processedImage && (
-            <View>
-              <Text style={styles.resultText}>Result Image</Text>
-              <Image source={{ uri: processedImage }} style={styles.image} />
-             
-              <Btn title="Download Image"
-             onPress={downloadImage} />
-                          
-            </View>
-          )}
+            <FastImage
+              source={require("../../assets/gif/superResolution.png")}
+              style={styles.gif}
+              resizeMode={FastImage.resizeMode.contain}
+            />
+          </View>
         </View>
-      }
-    />
+      </Modal>
+      <FlatList
+        data={[]}
+        keyExtractor={(_, index) => index.toString()}
+        ListHeaderComponent={
+          <View style={styles.container}>
+            <FeatureLayout
+              title="Photo Restoration"
+              description="Restore your Old Photos with AI"
+            />
+
+            {!image && showTutorial && (
+              <View style={styles.tutorialContainer}>
+                <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+                <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+              </View>
+            )}
+
+            {!image && (
+              <Btn title="Upload Image" onPress={openImagePicker} />
+            )}
+
+            {image && (
+              <View>
+                <Text style={styles.resultText}>Selected Image</Text>
+                <Image source={{ uri: image }} style={styles.image} />
+              </View>
+            )}
+
+            {image && !processedImage && (
+              <View style={styles.button}>
+                <Btn title="Generate Image"
+                  onPress={generateNewFeatureImage}
+                  disabled={loading} />
+
+              </View>
+            )}
+
+            {loading && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
+
+            {processedImage && (
+              <View>
+                <Text style={styles.resultText}>Result Image</Text>
+                <Image source={{ uri: processedImage }} style={styles.image} />
+
+                <Btn title="Download Image"
+                  onPress={downloadImage} />
+
+              </View>
+            )}
+          </View>
+        }
+      />
     </LinearGradient>
   );
 }
@@ -267,44 +246,44 @@ const styles = StyleSheet.create({
     padding: 10,
     alignItems: "center",
   },
-    modalOverlay: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(70, 71, 77, 0.85)', 
+    backgroundColor: 'rgba(70, 71, 77, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
- modalContentContainer: {
-  backgroundColor: "rgba(255,255,255,0.05)",
-  padding: 20,
-  borderRadius: 25,
-  alignItems: "center",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.2)",
-},
-closeButton: {
-  position: 'absolute',
-  top: 10,
-  right: 10,
-  backgroundColor: '#222',
-  borderRadius: 16,
-  paddingHorizontal: 10,
-  paddingVertical: 5,
-  zIndex: 10,
-  shadowColor: '#000',
-  shadowOpacity: 0.25,
-  shadowRadius: 6,
-  elevation: 5,
-},
+  modalContentContainer: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    padding: 20,
+    borderRadius: 25,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#222',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   closeButtonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
   gif: {
-  width: 260,
-  height: 260,
-  borderRadius: 20,
-},
+    width: 260,
+    height: 260,
+    borderRadius: 20,
+  },
   title: {
     color: "#fff",
     fontSize: 24,
@@ -317,31 +296,31 @@ closeButton: {
     textAlign: 'center',
     marginBottom: 20,
   },
- tutorialContainer: {
-  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  padding: 16,
-  borderRadius: 20,
-  marginBottom: 20,
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: 'rgba(255, 255, 255, 0.2)',
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-},
-tutorialTitle: {
-  color: "#ffffff",
-  fontSize: 20,
-  fontWeight: "600",
-  marginBottom: 8,
-},
-tutorialText: {
-  color: "#d1d5db",
-  fontSize: 14,
-  textAlign: 'left',
-  lineHeight: 20,
-},
+  tutorialContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  tutorialTitle: {
+    color: "#ffffff",
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  tutorialText: {
+    color: "#d1d5db",
+    fontSize: 14,
+    textAlign: 'left',
+    lineHeight: 20,
+  },
   image: {
     width: 200,
     height: 200,
@@ -359,6 +338,7 @@ tutorialText: {
     fontWeight: "bold",
     marginTop: 10,
     marginBottom: 5,
+    alignSelf: 'center'
   },
-  
+
 });

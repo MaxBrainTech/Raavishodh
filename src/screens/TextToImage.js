@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import { 
-  View, Text, TextInput,  StyleSheet, Alert, ActivityIndicator, Image ,Modal,TouchableOpacity
+  View, Text, TextInput,  StyleSheet, Alert, ActivityIndicator, Image ,
+  Modal,TouchableOpacity, ScrollView
 } from "react-native";
 import FastImage from 'react-native-fast-image';
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
 import axios from "axios";
 import { REPLICATE_API_TOKEN } from '@env';
-import useDailyUsage from '../hook/useDailyUsage';
-
+import useUsageGuard from "../hook/useUsageGuard";
+import { downloadImageFile } from "../utils/downloadImage";
 
 export default function TextToImage({ navigation }) {
   const [prompt, setPrompt] = useState("");
@@ -18,41 +19,25 @@ export default function TextToImage({ navigation }) {
   const [generateClicked, setGenerateClicked] = useState(false); 
    const [isModalVisible, setModalVisible] = useState(true);
 
-  const guestLimit = 1;
-  const loggedInLimit = 2;
-  
-  const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
-   "text_to_image_usage",
-    loggedInLimit,
-    guestLimit
-  );
-
+   const {
+     usageCount,
+     incrementUsage,
+     checkUsage,
+   } = useUsageGuard("ghibli_usage_count");
+   
+ 
 const handleGenerate = async () => {
-  if (!prompt) {
-    Alert.alert("Error", "Please enter a prompt before generating");
-    return;
-  }
- if (!isLoggedIn && usageCount >= guestLimit) {
-    Alert.alert(
-      "Login Required",
-      "Log in to use this feature again today.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Login",
-          onPress: () => navigation.navigate("Login", { returnTo: "TextToImage" }),
-        },
-      ]
-    );
-    return;
-  }
+    if (!prompt.trim()) {
+      Alert.alert("Error", "Please enter a prompt before generating.");
+      return;
+    }
 
-  if (isLoggedIn && usageCount >= loggedInLimit) {
-    Alert.alert("Limit Reached", "You’ve used your daily limit. Come back tomorrow.");
-    return;
-  }
+    const allowed = checkUsage();
+    if (!allowed) return;
 
-  setLoading(true);
+    setLoading(true);
+    setGenerateClicked(false);
+    setImageUrl(null);
 
     try {
       const response = await axios.post(
@@ -77,7 +62,7 @@ const handleGenerate = async () => {
         },
         {
           headers: {
-            "Authorization": `Token ${REPLICATE_API_TOKEN}`, // Fixed Authorization
+            "Authorization": `Token ${REPLICATE_API_TOKEN}`,
             "Content-Type": "application/json"
           }
         }
@@ -90,7 +75,7 @@ const handleGenerate = async () => {
       const predictionId = response.data.id;
       let imageResult = null;
 
-      // Poll the API to check the status
+     
       while (!imageResult) {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -98,7 +83,7 @@ const handleGenerate = async () => {
           `https://api.replicate.com/v1/predictions/${predictionId}`,
           {
             headers: {
-              "Authorization": `Token ${REPLICATE_API_TOKEN}` // Fixed Token
+              "Authorization": `Token ${REPLICATE_API_TOKEN}` 
             }
           }
         );
@@ -121,11 +106,16 @@ const handleGenerate = async () => {
   };
 
   const handleDownload = () => {
-    console.log("Download the image:", imageUrl);
-  };
+  if (!imageUrl) {
+    Alert.alert("No Image", "Please generate an image first.");
+    return;
+  }
 
+  downloadImageFile(imageUrl, "text2image");
+};
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+       <ScrollView contentContainerStyle={styles.scrollContainer}>
        <Modal
                       animationType="slide"
                       transparent={true}
@@ -163,7 +153,9 @@ const handleGenerate = async () => {
 
         {/* Conditionally render the Generate Image button */}
         {!generateClicked && buttonVisible && (
+           <View style={styles.buttonContainer}>
           <Btn onPress={handleGenerate} title="Generate Image" loading={loading} />
+           </View>
         )}
 
         {/* Display loading indicator while the image is being generated */}
@@ -174,9 +166,12 @@ const handleGenerate = async () => {
 
         {/* Display the download button after the image is generated */}
         {generateClicked && imageUrl && (
+          <View style={styles.buttonContainer}>
           <Btn onPress={handleDownload} title="Download Image" />
+          </View>
         )}
       </View>
+      </ScrollView>
     </LinearGradient>
   );
 }
@@ -184,6 +179,9 @@ const handleGenerate = async () => {
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1
   },
       modalOverlay: {
     flex: 1,
@@ -223,6 +221,11 @@ closeButton: {
   height: 260,
   borderRadius: 20,
 },
+buttonContainer: {
+  alignItems: 'center',
+  marginTop: 10,
+  marginBottom:10
+},
   container: {
     flex: 1,
     padding: 20,
@@ -254,7 +257,7 @@ closeButton: {
     borderWidth: 1,
      borderColor: 'rgba(255, 255, 255, 0.2)',
     padding: 10,
-     backgroundColor: 'rgba(255, 255, 255, 0.1)',
+     backgroundColor: 'rgba(231, 230, 236, 0.57)',
     borderRadius: 5,
     marginBottom: 10,
     

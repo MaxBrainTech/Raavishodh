@@ -1,16 +1,7 @@
-import React, { useState, useCallback  } from "react";
+import React, { useState } from "react";
 import {
-  View,
-  StyleSheet,
-  Image,
-  Alert,
-  Platform,
-  ActivityIndicator,
-  Text,
-  Modal,
-  FlatList,
-  TouchableOpacity,
-  KeyboardAvoidingView,
+  View,  StyleSheet, Image,  Alert,  Platform,  ActivityIndicator,  Text,
+  Modal,  FlatList,  TouchableOpacity,  KeyboardAvoidingView,
 } from "react-native";
 import FastImage from 'react-native-fast-image';
 import { useNavigation } from '@react-navigation/native';
@@ -21,9 +12,10 @@ import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from '@env';
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
-import useDailyUsage from "../hook/useDailyUsage";
+import useUsageGuard from "../hook/useUsageGuard";
+import { downloadImageFile } from '../utils/downloadImage';
 
-export default function FaceEnhancement() { 
+export default function FaceEnhancement() {
   const [showTutorial, setShowTutorial] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [enhancedImage, setEnhancedImage] = useState(null);
@@ -32,15 +24,12 @@ export default function FaceEnhancement() {
   const [readyToGenerate, setReadyToGenerate] = useState(false);
   const navigation = useNavigation();
 
-  const guestLimit = 1;
- const loggedInLimit = 2;
- 
- const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
-   "ghibli_usage_count",
-   loggedInLimit,
-   guestLimit
- );
- 
+   const {
+    usageCount,
+    incrementUsage,
+    checkUsage,
+  } = useUsageGuard("ghibli_usage_count");
+
   const tutorialSteps = [
     {
       title: "Upload Your Image",
@@ -67,35 +56,12 @@ export default function FaceEnhancement() {
     ]);
   };
 
-   const handleImageSelected = (uri) => {
+  const handleImageSelected = (uri) => {
     setSelectedImage(uri);
     setEnhancedImage(null);
     setReadyToGenerate(true);
   };
 
-
-  const checkUsage = () => {
-    if (usageCount >= limit) {
-      if (!isLoggedIn) {
-        Alert.alert(
-          "Guest Limit Reached",
-          "You’ve already used your free attempt today. Please log in to continue.",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Login",
-              onPress: () =>
-                navigation.navigate("Login", { redirectTo: "FaceEnhancement" }),
-            },
-          ]
-        );
-      } else {
-        Alert.alert("Limit Reached", "You’ve already used your daily limit.");
-      }
-      return false;
-    }
-    return true;
-  };
 
   const openCamera = async () => {
     await requestPermissions();
@@ -165,7 +131,7 @@ export default function FaceEnhancement() {
 
       if (prediction.status === "succeeded") {
         setEnhancedImage(prediction.output);
-         incrementUsage(); 
+        incrementUsage();
       } else {
         throw new Error("Image enhancement failed.");
       }
@@ -178,38 +144,11 @@ export default function FaceEnhancement() {
   };
 
   const downloadImage = async () => {
-    if (!enhancedImage) return Alert.alert("Error", "No image to download!");
+    if (!enhancedImage) return;
 
-    try {
-      if (Platform.OS === "android") {
-        const permission = await request(PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE);
-        if (permission !== "granted") {
-          return Alert.alert("Permission Denied", "Storage permission required.");
-        }
-      }
+    await downloadImageFile(enhancedImage, "enhanced");
 
-      const fileName = `enhanced_${Date.now()}.jpg`;
-      const path =
-        Platform.OS === "android"
-          ? `${RNFS.DownloadDirectoryPath}/${fileName}`
-          : `${RNFS.DocumentDirectoryPath}/${fileName}`;
-
-      const result = await RNFS.downloadFile({
-        fromUrl: enhancedImage,
-        toFile: path,
-      }).promise;
-
-      if (result.statusCode === 200) {
-        Alert.alert("Downloaded", `Image saved to: ${path}`);
-      } else {
-        throw new Error("Download failed");
-      }
-    } catch (err) {
-      Alert.alert("Error", err.message || "Download failed");
-      console.error(err);
-    }
   };
-
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
@@ -264,7 +203,7 @@ export default function FaceEnhancement() {
                 <Btn
                   title="Generate"
                   onPress={() => {
-                    setReadyToGenerate(false); 
+                    setReadyToGenerate(false);
                     processImage(selectedImage);
                   }}
                 />
@@ -314,87 +253,87 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tutorialContainer: {
-  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  padding: 16,
-  borderRadius: 20,
-  marginBottom: 20,
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: 'rgba(255, 255, 255, 0.2)',
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-},
-tutorialTitle: {
-  color: "#ffffff",
-  fontSize: 20,
-  fontWeight: "600",
-  marginBottom: 8,
-},
-tutorialText: {
-  color: "#d1d5db",
-  fontSize: 14,
-  textAlign: 'left',
-  lineHeight: 20,
-},
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  tutorialTitle: {
+    color: "#ffffff",
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  tutorialText: {
+    color: "#d1d5db",
+    fontSize: 14,
+    textAlign: 'left',
+    lineHeight: 20,
+  },
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(70, 71, 77, 0.85)', 
+    backgroundColor: 'rgba(70, 71, 77, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
- modalContentContainer: {
-  backgroundColor: "rgba(255,255,255,0.05)",
-  padding: 20,
-  borderRadius: 25,
-  alignItems: "center",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.2)",
-},
-closeButton: {
-  position: 'absolute',
-  top: 10,
-  right: 10,
-  backgroundColor: '#222',
-  borderRadius: 16,
-  paddingHorizontal: 10,
-  paddingVertical: 5,
-  zIndex: 10,
-  shadowColor: '#000',
-  shadowOpacity: 0.25,
-  shadowRadius: 6,
-  elevation: 5,
-},
+  modalContentContainer: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    padding: 20,
+    borderRadius: 25,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#222',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   closeButtonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
- gif: {
-  width: 260,
-  height: 260,
-  borderRadius: 20,
-},
- imageWrapper: {
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  borderRadius: 20,
-  padding: 20,
-  marginVertical: 20,
-  alignItems: "center",
-  shadowColor: "#000",
-  shadowOpacity: 0.2,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 6 },
-  width: '85%',
-},
-imageLabel: {
-  fontSize: 20,
-  fontWeight: "600",
-  color: "#ffffff",
-  marginBottom: 10,
-},
+  gif: {
+    width: 260,
+    height: 260,
+    borderRadius: 20,
+  },
+  imageWrapper: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    padding: 20,
+    marginVertical: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    width: '85%',
+  },
+  imageLabel: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#ffffff",
+    marginBottom: 10,
+  },
   uploadedImage: {
     width: 200,
     height: 200,
@@ -407,10 +346,10 @@ imageLabel: {
     marginVertical: 10,
     alignItems: "center",
   },
- processingText: {
-  color: "#fff",
-  fontSize: 16,
-  fontStyle: "italic",
-  marginTop: 10,
-},
+  processingText: {
+    color: "#fff",
+    fontSize: 16,
+    fontStyle: "italic",
+    marginTop: 10,
+  },
 });

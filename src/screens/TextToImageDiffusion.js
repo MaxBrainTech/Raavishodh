@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  Image,Modal,TouchableOpacity,
+  Image, Modal, TouchableOpacity,
   ActivityIndicator,
   Alert,
   StyleSheet,
@@ -14,7 +14,7 @@ import FastImage from 'react-native-fast-image';
 import Slider from "@react-native-community/slider";
 import axios from "axios";
 import LinearGradient from "react-native-linear-gradient";
-import Btn from "../component/Btn"; 
+import Btn from "../component/Btn";
 import useDailyUsage from "../hook/useDailyUsage";
 import { REPLICATE_API_TOKEN } from "@env";
 
@@ -24,13 +24,13 @@ export default function TextToImageDiffusion({ navigation }) {
   const [inferenceSteps, setInferenceSteps] = useState(50);
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
-    const [isModalVisible, setModalVisible] = useState(true);
+  const [isModalVisible, setModalVisible] = useState(true);
 
- const guestLimit = 1;
+  const guestLimit = 1;
   const loggedInLimit = 2;
-  
+
   const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
-   "text_to_image_usage",
+    "text_to_image_usage",
     loggedInLimit,
     guestLimit
   );
@@ -40,30 +40,30 @@ export default function TextToImageDiffusion({ navigation }) {
       Alert.alert("Error", "Please enter a prompt.");
       return;
     }
- if (!isLoggedIn && usageCount >= guestLimit) {
-    Alert.alert(
-      "Login Required",
-      "Log in to use this feature again today.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Login",
-          onPress: () => navigation.navigate("Login", { returnTo: "TextToImageDiffusion" }),
-        },
-      ]
-    );
-    return;
-  }
+    if (!isLoggedIn && usageCount >= guestLimit) {
+      Alert.alert(
+        "Login Required",
+        "Log in to use this feature again today.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Login",
+            onPress: () => navigation.navigate("Login", { returnTo: "TextToImageDiffusion" }),
+          },
+        ]
+      );
+      return;
+    }
 
-  if (isLoggedIn && usageCount >= loggedInLimit) {
-    Alert.alert("Limit Reached", "You’ve used your daily limit. Come back tomorrow.");
-    return;
-  }
+    if (isLoggedIn && usageCount >= loggedInLimit) {
+      Alert.alert("Limit Reached", "You’ve used your daily limit. Come back tomorrow.");
+      return;
+    }
     setLoading(true);
-    setImageUrl(null); 
+    setImageUrl(null);
 
     try {
-     
+
       const response = await axios.post(
         "https://api.replicate.com/v1/predictions",
         {
@@ -95,7 +95,7 @@ export default function TextToImageDiffusion({ navigation }) {
         return;
       }
 
-     
+
       let prediction = response.data;
       let status = prediction.status;
 
@@ -111,10 +111,10 @@ export default function TextToImageDiffusion({ navigation }) {
         console.log("Polling status:", status);
       }
 
-      
+
       if (prediction.output) {
         setImageUrl(prediction.output[0]);
-          incrementUsage();
+        incrementUsage();
       } else {
         Alert.alert("Error", "Failed to generate image.");
       }
@@ -127,28 +127,28 @@ export default function TextToImageDiffusion({ navigation }) {
   };
 
   return (
-       <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-         <Modal
-                                          animationType="slide"
-                                          transparent={true}
-                                          visible={isModalVisible}
-                                          onRequestClose={() => setModalVisible(false)}
-                                        >
-                                          <View style={styles.modalOverlay}>
-                                            <View style={styles.modalContentContainer}>
-                                              <TouchableOpacity style={styles.closeButton}
-                                                onPress={() => setModalVisible(false)}>
-                                                <Text style={styles.closeButtonText}>X</Text>
-                                              </TouchableOpacity>
-                          
-                                              <FastImage
-                                                source={require("../../assets/gif/superResolution.png")}
-                                                style={styles.gif}
-                                                resizeMode={FastImage.resizeMode.contain}
-                                              />
-                                            </View>
-                                          </View>
-                                        </Modal>
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContentContainer}>
+            <TouchableOpacity style={styles.closeButton}
+              onPress={() => setModalVisible(false)}>
+              <Text style={styles.closeButtonText}>X</Text>
+            </TouchableOpacity>
+
+            <FastImage
+              source={require("../../assets/gif/superResolution.png")}
+              style={styles.gif}
+              resizeMode={FastImage.resizeMode.contain}
+            />
+          </View>
+        </View>
+      </Modal>
       <FlatList
         data={[]}
         keyExtractor={(_, index) => index.toString()}
@@ -208,44 +208,44 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
   },
-     modalOverlay: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(70, 71, 77, 0.85)', 
+    backgroundColor: 'rgba(70, 71, 77, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
- modalContentContainer: {
-  backgroundColor: "rgba(255,255,255,0.05)",
-  padding: 20,
-  borderRadius: 25,
-  alignItems: "center",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.2)",
-},
-closeButton: {
-  position: 'absolute',
-  top: 10,
-  right: 10,
-  backgroundColor: '#222',
-  borderRadius: 16,
-  paddingHorizontal: 10,
-  paddingVertical: 5,
-  zIndex: 10,
-  shadowColor: '#000',
-  shadowOpacity: 0.25,
-  shadowRadius: 6,
-  elevation: 5,
-},
+  modalContentContainer: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    padding: 20,
+    borderRadius: 25,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#222',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   closeButtonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
   gif: {
-  width: 260,
-  height: 260,
-  borderRadius: 20,
-},
+    width: 260,
+    height: 260,
+    borderRadius: 20,
+  },
   title: {
     color: "#fff",
     fontSize: 24,
@@ -255,7 +255,7 @@ closeButton: {
   card: {
     width: "100%",
     padding: 16,
-  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
   },
   label: {
@@ -267,6 +267,7 @@ closeButton: {
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
+     backgroundColor: 'rgba(231, 230, 236, 0.57)',
     padding: 10,
     borderRadius: 5,
     marginBottom: 10,
@@ -276,6 +277,7 @@ closeButton: {
   },
   button: {
     marginTop: 10,
+     alignItems: 'center',
   },
   loader: {
     marginTop: 20,

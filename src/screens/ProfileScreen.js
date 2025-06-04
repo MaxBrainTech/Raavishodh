@@ -19,23 +19,31 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [avatar, setAvatar] = useState('https://i.pravatar.cc/150');
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setEmail(currentUser.email || 'john.doe@example.com');
-        setName(currentUser.displayName || 'Guest');
-        setAvatar(currentUser.photoURL || '');
+useEffect(() => {
+  const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    if (currentUser) {
+      setUser(currentUser);
+      setEmail(currentUser.email || 'john.doe@example.com');
+      setName(currentUser.displayName || 'Guest');
+
+      if (currentUser.photoURL) {
+        setAvatar(currentUser.photoURL);
       } else {
-        setUser(null);
-        setName('Guest'); 
-        setEmail('john.doe@example.com'); 
-        setAvatar('https://i.pravatar.cc/150');  
+        // Generate a random DiceBear avatar using a random seed
+        const randomSeed = Math.random().toString(36).substring(7);
+        setAvatar(`https://api.dicebear.com/7.x/bottts/svg?seed=${randomSeed}`);
       }
-    });
-  
-    return unsubscribe; 
-  }, []);
+    } else {
+      setUser(null);
+      setName('Guest');
+      setEmail('john.doe@example.com');
+      setAvatar('https://i.pravatar.cc/150');
+    }
+  });
+
+  return unsubscribe;
+}, []);
+
   
 
 const pickImage = () => {
@@ -122,14 +130,14 @@ const handleSave = () => {
         placeholder="Enter Name"
         placeholderTextColor={isDarkMode ? '#666' : '#aaa'}
       />
-      <TextInput
+      {/* <TextInput
         style={[styles.input, { color: isDarkMode ? '#fff' : '#000', borderColor: isDarkMode ? '#666' : '#ccc' }]}
         value={email}
         onChangeText={setEmail}
         placeholder="Enter Email"
         placeholderTextColor={isDarkMode ? '#666' : '#aaa'}
         keyboardType="email-address"
-      />
+      /> */}
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveText}>Save</Text>
       </TouchableOpacity>
@@ -162,16 +170,24 @@ const handleSave = () => {
   <OptionItem title="Faq " 
   icon="shield-checkmark-outline" isDarkMode={isDarkMode}
   onPress={() => navigation.navigate('Faq')} />
-  <OptionItem title="LogIn " 
+  {/* <OptionItem title="LogIn " 
   icon="shield-checkmark-outline" isDarkMode={isDarkMode}
-  onPress={() => navigation.navigate('Login')} />
+  onPress={() => navigation.navigate('Login')} /> */}
 </View>
 
-{auth.currentUser && (
-  <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-    <Text style={styles.logoutText}>Logout</Text>
-  </TouchableOpacity>
-)}
+<View style={styles.topRightContainer}>
+  {auth.currentUser ? (
+    <TouchableOpacity onPress={handleLogout}>
+      <Ionicons name="log-out-outline" size={24} color="#fff" />
+    </TouchableOpacity>
+  ) : (
+    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+      <Ionicons name="person-circle-outline" size={28
+
+      } color="#fff" />
+    </TouchableOpacity>
+  )}
+</View>
 
     </ScrollView>
     </LinearGradient>
@@ -205,6 +221,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
+  topRightContainer: {
+  position: 'absolute',
+  top: 50,
+  right: 20,
+  zIndex: 10,
+},
   profileContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     padding: 20,

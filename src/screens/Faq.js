@@ -100,13 +100,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
     color: 'white',
   },
   subText: {
-    fontSize: 14,
+    fontSize: 16,
     marginBottom: 20,
     color: 'white',
   },
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   questionText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     flex: 1,
     marginRight: 10,
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   answerText: {
-    fontSize: 16,
+    fontSize: 12,
     lineHeight: 22,
     color: '#333',
   },

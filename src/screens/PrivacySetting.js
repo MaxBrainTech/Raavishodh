@@ -85,13 +85,13 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '600',
     color: '#fff',
     marginBottom: 8,
   },
   sectionContent: {
-    fontSize: 16,
+    fontSize: 12,
     lineHeight: 24,
     color: '#ddd',
   },
