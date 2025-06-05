@@ -174,7 +174,7 @@ const downloadImage = async () => {
             </TouchableOpacity>
 
             <FastImage
-              source={require("../../assets/gif/superResolution.png")}
+              source={require("../../assets/gif/PhotoRestoration.png")}
               style={styles.gif}
               resizeMode={FastImage.resizeMode.contain}
             />

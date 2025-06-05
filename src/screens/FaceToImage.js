@@ -1,26 +1,20 @@
-import React, { useState ,useEffect } from "react";
+import React, { useState } from "react";
 import {
-  View,
-  Text,
-  Image,
-  TextInput,
-  ActivityIndicator,
-  FlatList,
-  StyleSheet,
-  Alert, Modal, TouchableOpacity,
-  ScrollView,
+  View, Text, Image, TextInput, ActivityIndicator, FlatList,
+  StyleSheet, Alert, Modal, TouchableOpacity, ScrollView,
 } from "react-native";
 import FastImage from 'react-native-fast-image';
-import { launchImageLibrary } from "react-native-image-picker";
+import { launchImageLibrary, launchCamera } from "react-native-image-picker";
 import FeatureLayout from "../component/FeatureLayout";
 import RNFS from "react-native-fs";
 import axios from "axios";
 import { REPLICATE_API_TOKEN } from "@env";
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {auth} from "../services/Firebase";
+import { request, PERMISSIONS } from 'react-native-permissions';
 import { useNavigation } from "@react-navigation/native";
+import useUsageGuard from "../hook/useUsageGuard";
+import { downloadImageFile } from '../utils/downloadImage';
 
 const tutorialSteps = [
   {
@@ -34,77 +28,70 @@ export default function FaceToImage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showTutorial, setShowTutorial] = useState(true);
   const [prompt, setPrompt] = useState("");
+  const [readyToGenerate, setReadyToGenerate] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [enhancedImage, setEnhancedImage] = useState(null);
   const [isModalVisible, setModalVisible] = useState(true);
-    const [usageCount, setUsageCount] = useState(0);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const navigation = useNavigation();
 
-useEffect(() => {
-  const initialize = async () => {
-    const storedUsage = await AsyncStorage.getItem("faceToImageUsage");
-    const lastUsed = await AsyncStorage.getItem("faceToImageLastUsed");
-    const today = new Date().toISOString().split('T')[0];
+  const {
+    usageCount,
+    incrementUsage,
+    checkUsage,
+  } = useUsageGuard("ghibli_usage_count");
 
-    if (lastUsed !== today) {
-      await AsyncStorage.setItem("faceToImageUsage", "0");
-      await AsyncStorage.setItem("faceToImageLastUsed", today);
-      setUsageCount(0);
+  const requestPermissions = async () => {
+    if (Platform.OS === "android") {
+      await request(PERMISSIONS.ANDROID.CAMERA);
+      await request(PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE);
     } else {
-      setUsageCount(storedUsage ? parseInt(storedUsage) : 0);
+      await request(PERMISSIONS.IOS.PHOTO_LIBRARY);
+      await request(PERMISSIONS.IOS.CAMERA);
     }
-
-    const currentUser = auth.currentUser;
-    setIsLoggedIn(!!currentUser);
   };
 
-  const unsubscribe = auth.onAuthStateChanged(user => {
-    setIsLoggedIn(!!user);
-  });
+  const openImagePicker = () => {
+    Alert.alert("Choose an Option", "Select an option to upload an image.", [
+      { text: "Camera", onPress: openCamera },
+      { text: "Gallery", onPress: openGallery },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
 
-  initialize();
+  const handleImageSelected = (uri) => {
+    setSelectedImage(uri);
+    setEnhancedImage(null);
+    setReadyToGenerate(true);
+  };
 
-  return () => unsubscribe(); // Clean up on unmount
-}, []);
 
+  const openCamera = async () => {
+    await requestPermissions();
+    const allowed = await checkUsage();
+    if (!allowed) return;
 
- 
-  const openImagePicker = async () => {
-    launchImageLibrary({ mediaType: "photo", quality: 1 }, async (response) => {
+    launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
-        const imageUri = response.assets[0].uri;
-        setSelectedImage(imageUri);
-        setShowTutorial(false);
+        handleImageSelected(response.assets[0].uri);
       }
     });
   };
 
- 
+  const openGallery = async () => {
+    await requestPermissions();
+    const allowed = await checkUsage();
+    if (!allowed) return;
+
+    launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
+      if (!response.didCancel && response.assets?.length > 0) {
+        handleImageSelected(response.assets[0].uri);
+      }
+    });
+  };
+
+
   const processImage = async () => {
-      const limit = isLoggedIn ? 2 : 1;
-
-if (usageCount >= limit) {
-  if (!isLoggedIn) {
-    Alert.alert(
-      "Limit Reached",
-      "You’ve used your free try. Login to use one more time today.",
-      [
-        {
-          text: "Login",
-          onPress: () => navigation.navigate("Login"),
-        },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
-  } else {
-    Alert.alert("Limit Reached", "You've reached your daily limit. Come back tomorrow!");
-  }
-  return;
-}
-
-
     if (!selectedImage) {
       Alert.alert("Error", "Please select an image first!");
       return;
@@ -162,11 +149,8 @@ if (usageCount >= limit) {
       if (prediction.status === "succeeded") {
         if (Array.isArray(prediction.output) && prediction.output.length > 0) {
           setEnhancedImage(prediction.output);
-            const newCount = usageCount + 1;
-        setUsageCount(newCount);
-        await AsyncStorage.setItem("faceToImageUsage", newCount.toString());
-        const today = new Date().toISOString().split("T")[0];
-        await AsyncStorage.setItem("faceToImageLastUsed", today);
+          incrementUsage();
+
         } else {
           throw new Error("Invalid API response format");
         }
@@ -179,24 +163,14 @@ if (usageCount >= limit) {
     }
     setProcessing(false);
   };
-  const downloadImage = async (imageUrl) => {
-    try {
-      const fileName = `enhanced_${Date.now()}.jpg`; 
-      const downloadDest = `${RNFS.DownloadDirectoryPath}/${fileName}`;
 
-      const { promise } = RNFS.downloadFile({
-        fromUrl: imageUrl,
-        toFile: downloadDest,
-      });
+  const downloadImage = async () => {
+    if (!enhancedImage) return;
 
-      await promise;
+    await downloadImageFile(enhancedImage, "face2image");
 
-      Alert.alert("Success", "Image downloaded successfully to Downloads folder!");
-    } catch (error) {
-      console.error("Download error:", error);
-      Alert.alert("Error", "Failed to download image.");
-    }
   };
+
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
@@ -248,6 +222,7 @@ if (usageCount >= limit) {
           {/* Show uploaded image */}
           {selectedImage && (
             <View style={styles.imageWrapper}>
+              <Text style={styles.imageLabel}>Selected Image</Text>
               <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
             </View>
           )}
@@ -268,7 +243,7 @@ if (usageCount >= limit) {
 
               {prompt.trim() && !processing && !enhancedImage && (
                 <Btn title="Generate"
-                 onPress={processImage} />
+                  onPress={processImage} />
               )}
 
               {processing && (
@@ -284,12 +259,19 @@ if (usageCount >= limit) {
                   keyExtractor={(_, index) => index.toString()}
                   renderItem={({ item }) => (
                     <View style={styles.imageWrapper}>
+                      <Text style={styles.imageLabel}>Result</Text>
                       <Image source={{ uri: item }} style={styles.uploadedImage} />
-                      <Btn
-                      title="Download"
-                        onPress={() => downloadImage(item)}
-                      >
-                     </Btn>
+                      {downloading ? (
+                        <View style={{ marginTop: 10 }}>
+                          <ActivityIndicator size="large" color="#ffffff" />
+                          <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                        </View>
+                      ) : (
+                        <Btn
+                          title="Download Image"
+                          onPress={downloadImage}
+                        />
+                      )}
                     </View>
                   )}
                   scrollEnabled={false}
@@ -366,37 +348,37 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tutorialContainer: {
-  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  padding: 16,
-  borderRadius: 20,
-  marginBottom: 20,
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: 'rgba(255, 255, 255, 0.2)',
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-  
-  
-},
-tutorialTitle: {
-  color: "#ffffff",
-  fontSize: 20,
-  fontWeight: "600",
-  marginBottom: 8,
-},
-tutorialText: {
-  color: "#d1d5db",
-  fontSize: 14,
-  textAlign: 'left',
-  lineHeight: 20,
-},
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+
+
+  },
+  tutorialTitle: {
+    color: "#ffffff",
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  tutorialText: {
+    color: "#d1d5db",
+    fontSize: 14,
+    textAlign: 'left',
+    lineHeight: 20,
+  },
   uploadedImage: {
     width: 250,
     height: 250,
     borderRadius: 10,
-    resizeMode: "cover",
+    resizeMode: "contain",
     marginBottom: 20,
   },
   processingText: {
@@ -422,7 +404,21 @@ tutorialText: {
     alignItems: "center",
   },
   imageWrapper: {
-    marginVertical: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    padding: 20,
+    marginVertical: 20,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    width: '85%',
+  },
+  imageLabel: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#ffffff",
+    marginBottom: 10,
   },
 });

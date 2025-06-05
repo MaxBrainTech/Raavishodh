@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
-  View,  StyleSheet, Image,  Alert,  Platform,  ActivityIndicator,  Text,
-  Modal,  FlatList,  TouchableOpacity,  KeyboardAvoidingView,
+  View, StyleSheet, Image, Alert, Platform, ActivityIndicator, Text,
+  Modal, FlatList, TouchableOpacity, KeyboardAvoidingView,
 } from "react-native";
 import FastImage from 'react-native-fast-image';
 import { useNavigation } from '@react-navigation/native';
@@ -22,9 +22,11 @@ export default function FaceEnhancement() {
   const [processing, setProcessing] = useState(false);
   const [isModalVisible, setModalVisible] = useState(true);
   const [readyToGenerate, setReadyToGenerate] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
   const navigation = useNavigation();
 
-   const {
+  const {
     usageCount,
     incrementUsage,
     checkUsage,
@@ -146,9 +148,16 @@ export default function FaceEnhancement() {
   const downloadImage = async () => {
     if (!enhancedImage) return;
 
-    await downloadImageFile(enhancedImage, "enhanced");
-
+    try {
+      setDownloading(true);
+      await downloadImageFile(enhancedImage, "enhanced");
+    } catch (err) {
+      console.error("Download failed", err);
+    } finally {
+      setDownloading(false);
+    }
   };
+
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
@@ -220,10 +229,18 @@ export default function FaceEnhancement() {
                 <View style={styles.imageWrapper}>
                   <Text style={styles.imageLabel}>Result</Text>
                   <Image source={{ uri: enhancedImage }} style={styles.uploadedImage} />
-                  <Btn
-                    title="Download Image"
-                    onPress={downloadImage}
-                  />
+                  {downloading ? (
+                    <View style={{ marginTop: 10 }}>
+                      <ActivityIndicator size="large" color="#ffffff" />
+                      <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                    </View>
+                  ) : (
+                    <Btn
+                      title="Download Image"
+                      onPress={downloadImage}
+                    />
+                  )}
+
                 </View>
               )}
 
@@ -340,7 +357,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
     marginBottom: 30,
     borderRadius: 10,
-    resizeMode: "cover",
+    resizeMode: "contain",
   },
   processingContainer: {
     marginVertical: 10,

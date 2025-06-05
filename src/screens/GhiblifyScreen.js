@@ -27,14 +27,14 @@ export default function GhiblifyScreen({ navigation }) {
   const [processing, setProcessing] = useState(false);
   const [ghibliImage, setGhibliImage] = useState(null);
   const [isModalVisible, setModalVisible] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
 
-
-const {
-  usageCount,
-  incrementUsage,
-  checkUsage,
-} = useUsageGuard("ghibli_usage_count");
+  const {
+    usageCount,
+    incrementUsage,
+    checkUsage,
+  } = useUsageGuard("ghibli_usage_count");
 
 
   const openImagePicker = () => {
@@ -136,9 +136,14 @@ const {
 
   const handleDownload = async () => {
     if (!ghibliImage) return;
-
-   await downloadImageFile(ghibliImage, "ghibli");
-
+    try {
+      setDownloading(true);
+      await downloadImageFile(ghibliImage, "ghibli");
+    } catch (err) {
+      console.error("Download failed", err);
+    } finally {
+      setDownloading(false);
+    }
   };
 
 
@@ -187,20 +192,17 @@ const {
           ) : (
             <>
               {selectedImage && (
-                <Image
-                  source={{ uri: selectedImage }}
-                  style={styles.uploadedImage}
-                  onError={(e) => {
-                    console.log("Selected Image Load Error:", e.nativeEvent.error);
-                    Alert.alert("Error", "Could not load selected image.");
-                  }}
-                />
+                <View style={styles.imageWrapper}>
+                  <Text style={styles.imageLabel}>Selected Image</Text>
+                  <Image source={{ uri: selectedImage }} style={styles.uploadedImage}
+                  />
+                </View>
               )}
               {!ghibliImage && (
-                <TouchableOpacity style={styles.button}
-                  onPress={processGhiblifyImage} disabled={processing}>
-                  <Text style={styles.buttonText}> Generate Ghibli Image</Text>
-                </TouchableOpacity>
+                <Btn
+                  title="Generate Image"
+                  onPress={processGhiblifyImage}
+                />
               )}
             </>
           )}
@@ -213,20 +215,22 @@ const {
           )}
 
           {ghibliImage && (
-            <>
-              <Image
-                source={{ uri: ghibliImage }}
-                style={styles.generatedImage}
-                onError={(e) => {
-                  console.log("Ghibli Image Load Error:", e.nativeEvent.error);
-                  Alert.alert("Error", "Could not load generated image.");
-                }}
-              />
+           <View style={styles.imageWrapper}>
+                            <Text style={styles.imageLabel}>Result</Text>
+              <Image source={{ uri: ghibliImage }} style={styles.generatedImage} />
 
-              <Btn title="Download Image"
-                onPress={handleDownload}>
-              </Btn>
-            </>
+              {downloading ? (
+                <View style={{ marginTop: 10 }}>
+                  <ActivityIndicator size="large" color="#ffffff" />
+                  <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                </View>
+              ) : (
+                <Btn
+                  title="Download Image"
+                  onPress={handleDownload}
+                />
+              )}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -284,6 +288,24 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 20,
+  },
+   imageWrapper: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    padding: 20,
+    marginVertical: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    width: '85%',
+  },
+   imageLabel: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#ffffff",
+    marginBottom: 10,
   },
   title: {
     color: "#fff",

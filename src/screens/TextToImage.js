@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { 
-  View, Text, TextInput,  StyleSheet, Alert, ActivityIndicator, Image ,
-  Modal,TouchableOpacity, ScrollView
+import {
+  View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, Image,
+  Modal, TouchableOpacity, ScrollView
 } from "react-native";
 import FastImage from 'react-native-fast-image';
 import LinearGradient from "react-native-linear-gradient";
@@ -16,17 +16,18 @@ export default function TextToImage({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState(null);
   const [buttonVisible, setButtonVisible] = useState(true);
-  const [generateClicked, setGenerateClicked] = useState(false); 
-   const [isModalVisible, setModalVisible] = useState(true);
+  const [generateClicked, setGenerateClicked] = useState(false);
+  const [isModalVisible, setModalVisible] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
-   const {
-     usageCount,
-     incrementUsage,
-     checkUsage,
-   } = useUsageGuard("ghibli_usage_count");
-   
- 
-const handleGenerate = async () => {
+  const {
+    usageCount,
+    incrementUsage,
+    checkUsage,
+  } = useUsageGuard("ghibli_usage_count");
+
+
+  const handleGenerate = async () => {
     if (!prompt.trim()) {
       Alert.alert("Error", "Please enter a prompt before generating.");
       return;
@@ -75,7 +76,7 @@ const handleGenerate = async () => {
       const predictionId = response.data.id;
       let imageResult = null;
 
-     
+
       while (!imageResult) {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -83,7 +84,7 @@ const handleGenerate = async () => {
           `https://api.replicate.com/v1/predictions/${predictionId}`,
           {
             headers: {
-              "Authorization": `Token ${REPLICATE_API_TOKEN}` 
+              "Authorization": `Token ${REPLICATE_API_TOKEN}`
             }
           }
         );
@@ -91,7 +92,7 @@ const handleGenerate = async () => {
         if (statusResponse.data.status === "succeeded") {
           imageResult = statusResponse.data.output[0];
           setImageUrl(imageResult);
-           await incrementUsage(); 
+          await incrementUsage();
         } else if (statusResponse.data.status === "failed") {
           throw new Error("Image generation failed.");
         }
@@ -101,76 +102,94 @@ const handleGenerate = async () => {
       console.error(error);
     } finally {
       setLoading(false);
-      setGenerateClicked(true); 
+      setGenerateClicked(true);
     }
   };
 
-  const handleDownload = () => {
-  if (!imageUrl) {
-    Alert.alert("No Image", "Please generate an image first.");
-    return;
-  }
+  const downloadImage = async () => {
+    if (!imageUrl) return;
 
-  downloadImageFile(imageUrl, "text2image");
-};
+    try {
+      setDownloading(true);
+      await downloadImageFile(imageUrl, "generated");
+    } catch (err) {
+      console.error("Download failed", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-       <ScrollView contentContainerStyle={styles.scrollContainer}>
-       <Modal
-                      animationType="slide"
-                      transparent={true}
-                      visible={isModalVisible}
-                      onRequestClose={() => setModalVisible(false)}
-                    >
-                      <View style={styles.modalOverlay}>
-                        <View style={styles.modalContentContainer}>
-                          <TouchableOpacity style={styles.closeButton}
-                            onPress={() => setModalVisible(false)}>
-                            <Text style={styles.closeButtonText}>X</Text>
-                          </TouchableOpacity>
-      
-                          <FastImage
-                            source={require("../../assets/gif/TextToImage.png")}
-                            style={styles.gif}
-                            resizeMode={FastImage.resizeMode.contain}
-                          />
-                        </View>
-                      </View>
-                    </Modal>
-      <View style={styles.container}>
-        <Text style={styles.title}>Text to Image Generation</Text>
-        <Text style={styles.subtitle}>Generate amazing images from your text descriptions.</Text>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={isModalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContentContainer}>
+              <TouchableOpacity style={styles.closeButton}
+                onPress={() => setModalVisible(false)}>
+                <Text style={styles.closeButtonText}>X</Text>
+              </TouchableOpacity>
 
-        <View style={styles.textcontainer}>
-          <Text style={styles.label}>Enter your Prompt</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Describe the image you want to generate..."
-            value={prompt}
-            onChangeText={setPrompt}
-          />
-        </View>
-
-        {/* Conditionally render the Generate Image button */}
-        {!generateClicked && buttonVisible && (
-           <View style={styles.buttonContainer}>
-          <Btn onPress={handleGenerate} title="Generate Image" loading={loading} />
-           </View>
-        )}
-
-        {/* Display loading indicator while the image is being generated */}
-        {loading && <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />}
-
-        {/* Display the generated image */}
-        {imageUrl && <Image source={{ uri: imageUrl }} style={styles.generatedImage} />}
-
-        {/* Display the download button after the image is generated */}
-        {generateClicked && imageUrl && (
-          <View style={styles.buttonContainer}>
-          <Btn onPress={handleDownload} title="Download Image" />
+              <FastImage
+                source={require("../../assets/gif/TextToImage.png")}
+                style={styles.gif}
+                resizeMode={FastImage.resizeMode.contain}
+              />
+            </View>
           </View>
-        )}
-      </View>
+        </Modal>
+        <View style={styles.container}>
+          <Text style={styles.title}>Text to Image Generation</Text>
+          <Text style={styles.subtitle}>Generate amazing images from your text descriptions.</Text>
+
+          <View style={styles.textcontainer}>
+            <Text style={styles.label}>Enter your Prompt</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Describe the image you want to generate..."
+              value={prompt}
+              onChangeText={setPrompt}
+            />
+          </View>
+
+
+          {!generateClicked && buttonVisible && (
+            <View style={styles.buttonContainer}>
+              <Btn onPress={handleGenerate} title="Generate Image" loading={loading} />
+            </View>
+          )}
+
+
+          {loading && <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />}
+
+       {imageUrl && (
+            <>
+              <View style={styles.imageWrapper}>
+                <Text style={styles.imageLabel}>Result</Text>
+                <Image source={{ uri: imageUrl }} style={styles.generatedImage} />
+              </View>
+
+              <View style={styles.buttonContainer}>
+                {downloading ? (
+                  <View style={{ marginTop: 10 }}>
+                    <ActivityIndicator size="large" color="#ffffff" />
+                    <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                  </View>
+                ) : (
+                  <Btn
+                    title="Download Image"
+                    onPress={downloadImage}
+                  />
+                )}
+              </View>
+            </>
+          )}
+        </View>
       </ScrollView>
     </LinearGradient>
   );
@@ -183,56 +202,56 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1
   },
-      modalOverlay: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(70, 71, 77, 0.85)', 
+    backgroundColor: 'rgba(70, 71, 77, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
- modalContentContainer: {
-  backgroundColor: "rgba(255,255,255,0.05)",
-  padding: 20,
-  borderRadius: 25,
-  alignItems: "center",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.2)",
-},
-closeButton: {
-  position: 'absolute',
-  top: 10,
-  right: 10,
-  backgroundColor: '#222',
-  borderRadius: 16,
-  paddingHorizontal: 10,
-  paddingVertical: 5,
-  zIndex: 10,
-  shadowColor: '#000',
-  shadowOpacity: 0.25,
-  shadowRadius: 6,
-  elevation: 5,
-},
+  modalContentContainer: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    padding: 20,
+    borderRadius: 25,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#222',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   closeButtonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
   gif: {
-  width: 260,
-  height: 260,
-  borderRadius: 20,
-},
-buttonContainer: {
-  alignItems: 'center',
-  marginTop: 10,
-  marginBottom:10
-},
+    width: 260,
+    height: 260,
+    borderRadius: 20,
+  },
+  buttonContainer: {
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 10
+  },
   container: {
     flex: 1,
     padding: 20,
   },
   textcontainer: {
     padding: 10,
-   backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 10,
     marginBottom: 10
   },
@@ -251,23 +270,42 @@ buttonContainer: {
     fontWeight: "bold",
     fontSize: 16,
     marginBottom: 15,
-      color: "#d1d5db",
+    color: "#d1d5db",
   },
   input: {
     borderWidth: 1,
-     borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     padding: 10,
-     backgroundColor: 'rgba(231, 230, 236, 0.57)',
+    backgroundColor: 'rgba(231, 230, 236, 0.57)',
     borderRadius: 5,
     marginBottom: 10,
-    
+
   },
   generatedImage: {
-    width: 300,
-    height: 300,
-    marginTop: 20,
+     width: 200,
+    height: 200,
+    marginTop: 0,
+    marginBottom: 30,
     borderRadius: 10,
-    alignSelf: "center",
-    marginBottom:20
-  }
+    resizeMode: "contain",
+  },
+   imageWrapper: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    padding: 20,
+    marginVertical: 20,
+    alignItems: "center",
+    alignSelf:'center',
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    width: '85%',
+  },
+  imageLabel: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#ffffff",
+    marginBottom: 10,
+  },
 });

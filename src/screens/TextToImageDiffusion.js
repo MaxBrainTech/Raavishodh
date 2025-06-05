@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Image, Modal, TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  FlatList
+  View, Text, TextInput, Image, Modal, TouchableOpacity,
+  ActivityIndicator, Alert, StyleSheet, FlatList
 } from "react-native";
 import { Card } from "react-native-paper";
 import FastImage from 'react-native-fast-image';
@@ -15,7 +9,8 @@ import Slider from "@react-native-community/slider";
 import axios from "axios";
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
-import useDailyUsage from "../hook/useDailyUsage";
+import useUsageGuard from "../hook/useUsageGuard";
+import { downloadImageFile } from "../utils/downloadImage";
 import { REPLICATE_API_TOKEN } from "@env";
 
 export default function TextToImageDiffusion({ navigation }) {
@@ -25,40 +20,24 @@ export default function TextToImageDiffusion({ navigation }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setModalVisible] = useState(true);
+    const [downloading, setDownloading] = useState(false);
 
-  const guestLimit = 1;
-  const loggedInLimit = 2;
+  const {
+    usageCount,
+    incrementUsage,
+    checkUsage,
+  } = useUsageGuard("ghibli_usage_count");
 
-  const { usageCount, limit, incrementUsage, isLoggedIn } = useDailyUsage(
-    "text_to_image_usage",
-    loggedInLimit,
-    guestLimit
-  );
 
-  const generateImage = async () => {
-    if (!prompt) {
-      Alert.alert("Error", "Please enter a prompt.");
-      return;
-    }
-    if (!isLoggedIn && usageCount >= guestLimit) {
-      Alert.alert(
-        "Login Required",
-        "Log in to use this feature again today.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Login",
-            onPress: () => navigation.navigate("Login", { returnTo: "TextToImageDiffusion" }),
-          },
-        ]
-      );
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      Alert.alert("Error", "Please enter a prompt before generating.");
       return;
     }
 
-    if (isLoggedIn && usageCount >= loggedInLimit) {
-      Alert.alert("Limit Reached", "You’ve used your daily limit. Come back tomorrow.");
-      return;
-    }
+    const allowed = checkUsage();
+    if (!allowed) return;
+
     setLoading(true);
     setImageUrl(null);
 
@@ -126,6 +105,20 @@ export default function TextToImageDiffusion({ navigation }) {
     }
   };
 
+  const downloadImage = async () => {
+     if (!imageUrl) return;
+ 
+     try {
+       setDownloading(true);
+       await downloadImageFile(imageUrl, "generated");
+     } catch (err) {
+       console.error("Download failed", err);
+     } finally {
+       setDownloading(false);
+     }
+   };
+
+
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
       <Modal
@@ -142,7 +135,7 @@ export default function TextToImageDiffusion({ navigation }) {
             </TouchableOpacity>
 
             <FastImage
-              source={require("../../assets/gif/superResolution.png")}
+              source={require("../../assets/gif/StableDiffusion.png")}
               style={styles.gif}
               resizeMode={FastImage.resizeMode.contain}
             />
@@ -185,14 +178,33 @@ export default function TextToImageDiffusion({ navigation }) {
               />
 
               <View style={styles.button}>
-                <Btn title="Generate Image" onPress={generateImage} disabled={loading} />
+                <Btn title="Generate Image" onPress={handleGenerate} disabled={loading} />
               </View>
             </Card>
 
             {loading && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
 
             {imageUrl && (
-              <Image source={{ uri: imageUrl }} style={styles.image} />
+              <>
+                <View style={styles.imageWrapper}>
+                  <Text style={styles.imageLabel}>Result</Text>
+                  <Image source={{ uri: imageUrl }} style={styles.generatedImage} />
+                </View>
+
+                <View style={styles.buttonContainer}>
+                  {downloading ? (
+                    <View style={{ marginTop: 10 }}>
+                      <ActivityIndicator size="large" color="#ffffff" />
+                      <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                    </View>
+                  ) : (
+                    <Btn
+                      title="Download Image"
+                      onPress={downloadImage}
+                    />
+                  )}
+                </View>
+              </>
             )}
           </View>
         }
@@ -256,7 +268,7 @@ const styles = StyleSheet.create({
     width: "100%",
     padding: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
+    // borderRadius: 12,
   },
   label: {
     fontSize: 16,
@@ -267,7 +279,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-     backgroundColor: 'rgba(231, 230, 236, 0.57)',
+    backgroundColor: 'rgba(231, 230, 236, 0.57)',
     padding: 10,
     borderRadius: 5,
     marginBottom: 10,
@@ -277,16 +289,36 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 10,
-     alignItems: 'center',
+    alignItems: 'center',
   },
   loader: {
     marginTop: 20,
   },
-  image: {
-    width: 300,
-    height: 300,
-    alignSelf: "center",
-    marginTop: 20,
+imageWrapper: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    padding: 20,
+    marginVertical: 20,
+    alignItems: "center",
+    alignSelf:'center',
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    width: '85%',
+  },
+  imageLabel: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#ffffff",
+    marginBottom: 10,
+  },
+   generatedImage: {
+     width: 200,
+    height: 200,
+    marginTop: 0,
+    marginBottom: 30,
     borderRadius: 10,
+    resizeMode: "contain",
   },
 });

@@ -182,9 +182,7 @@ const handleSave = () => {
     </TouchableOpacity>
   ) : (
     <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-      <Ionicons name="person-circle-outline" size={28
-
-      } color="#fff" />
+      <Ionicons name="person-circle-outline" size={40} color="#fff" />
     </TouchableOpacity>
   )}
 </View>
@@ -223,8 +221,8 @@ const styles = StyleSheet.create({
   },
   topRightContainer: {
   position: 'absolute',
-  top: 50,
-  right: 20,
+  top: 30,
+  right: 30,
   zIndex: 10,
 },
   profileContainer: {
