@@ -1,29 +1,27 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View, Text, Image, StyleSheet,
   FlatList, ActivityIndicator, Alert, Modal, TouchableOpacity
 } from "react-native";
-import { launchImageLibrary } from "react-native-image-picker";
+import { launchImageLibrary, launchCamera } from "react-native-image-picker";
 import FastImage from 'react-native-fast-image';
 import LinearGradient from "react-native-linear-gradient";
 import FeatureLayout from "../component/FeatureLayout";
 import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from "@env";
 import Btn from "../component/Btn";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { downloadImageFile } from "../utils/downloadImage";
 import useUsageGuard from "../hook/useUsageGuard";
-import { auth } from "../services/Firebase";
 
 export default function SuperResolution() {
   const [showTutorial, setShowTutorial] = useState(true);
   const [image, setImage] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [enhancedImage, setEnhancedImage] = useState(null);
-  const [user, setUser] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
   const [isModalVisible, setModalVisible] = useState(true);
+  const [processedImage, setProcessedImage] = useState(null);
+  const [downloading, setDownloading] = useState(false);
   const navigation = useNavigation();
 
   const tutorialSteps = [
@@ -34,19 +32,12 @@ export default function SuperResolution() {
     }
   ];
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      setAuthChecked(true);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const {
     usageCount,
     incrementUsage,
     checkUsage,
-  } = useUsageGuard("ghibli_usage_count");
+  } = useUsageGuard("superResolution_usage_count");
 
 
   const openImagePicker = () => {
@@ -77,15 +68,13 @@ export default function SuperResolution() {
 
   const handleImageSelected = (uri) => {
     setImage(uri);
-    setProcessedImage(null);
+    setEnhancedImage(null);
     setShowTutorial(false);
   };
 
 
   const processImage = async () => {
     if (!image) return Alert.alert("Error", "No image selected!");
-    const isAllowed = await checkUsageLimit();
-    if (!isAllowed) return;
 
     setProcessing(true);
     setEnhancedImage(null);
@@ -126,7 +115,10 @@ export default function SuperResolution() {
 
       if (prediction.status === "succeeded") {
         setEnhancedImage(prediction.output);
-      } else {
+        incrementUsage();
+      }
+
+      else {
         throw new Error(`Failed with status: ${prediction.status}`);
       }
     } catch (error) {
@@ -138,30 +130,17 @@ export default function SuperResolution() {
   };
 
   const downloadImage = async () => {
-    if (!enhancedImage) {
-      Alert.alert("Error", "No image to download!");
-      return;
-    }
-
+    if (!enhancedImage) return;
     try {
-      const fileName = `enhanced_${Date.now()}.jpg`;
-      const downloadPath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
-
-      const result = await RNFS.downloadFile({
-        fromUrl: enhancedImage,
-        toFile: downloadPath,
-      }).promise;
-
-      if (result.statusCode === 200) {
-        Alert.alert("Download Complete", `Image saved to ${downloadPath}`);
-      } else {
-        throw new Error("Download failed");
-      }
-    } catch (error) {
-      console.error("Download Error:", error);
-      Alert.alert("Error", error.message || "Failed to download image");
+      setDownloading(true);
+      await downloadImageFile(enhancedImage, "resoluted");
+    } catch (err) {
+      console.error("Download failed", err);
+    } finally {
+      setDownloading(false);
     }
   };
+
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
@@ -206,9 +185,9 @@ export default function SuperResolution() {
             {!image && <Btn title="Upload Image" onPress={openImagePicker} />}
 
             {image && (
-              <View>
-                <Text style={styles.resultText}>Selected Image</Text>
-                <Image source={{ uri: image }} style={styles.image} />
+              <View style={styles.imageWrapper}>
+                <Text style={styles.imageLabel}>Selected Image</Text>
+                <Image source={{ uri: image }} style={styles.uploadedImage} />
               </View>
             )}
 
@@ -225,12 +204,20 @@ export default function SuperResolution() {
             {processing && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
 
             {enhancedImage && (
-              <View>
-                <Text style={styles.resultText}>Enhanced Image</Text>
-                <Image source={{ uri: enhancedImage }} style={styles.image} />
-                <View style={styles.button}>
-                  <Btn title="Download Image" onPress={downloadImage} />
-                </View>
+              <View style={styles.imageWrapper}>
+                <Text style={styles.imageLabel}>Result</Text>
+                <Image source={{ uri: enhancedImage  }} style={styles.uploadedImage} />
+                {downloading ? (
+                  <View style={{ marginTop: 10 }}>
+                    <ActivityIndicator size="large" color="#ffffff" />
+                    <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                  </View>
+                ) : (
+                  <Btn
+                    title="Download Image"
+                    onPress={downloadImage}
+                  />
+                )}
               </View>
             )}
           </View>
@@ -334,5 +321,31 @@ const styles = StyleSheet.create({
   },
   button: {
     marginVertical: 10,
+  },
+  imageWrapper: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    padding: 20,
+    marginVertical: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    width: '85%',
+  },
+  imageLabel: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#ffffff",
+    marginBottom: 10,
+  },
+  uploadedImage: {
+    width: 200,
+    height: 200,
+    marginTop: 0,
+    marginBottom: 30,
+    borderRadius: 10,
+    resizeMode: "contain",
   },
 });

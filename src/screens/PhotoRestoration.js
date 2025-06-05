@@ -3,14 +3,13 @@ import {
   View, Text, Image, StyleSheet,
   FlatList, ActivityIndicator, Alert, Modal, TouchableOpacity
 } from "react-native";
-import { launchImageLibrary } from "react-native-image-picker";
+import { launchImageLibrary, launchCamera } from "react-native-image-picker";
 import FastImage from 'react-native-fast-image';
 import FeatureLayout from "../component/FeatureLayout";
 import LinearGradient from "react-native-linear-gradient";
 import { useNavigation } from '@react-navigation/native';
 import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from '@env';
-import { auth } from "../services/Firebase"
 import { downloadImageFile } from "../utils/downloadImage";
 import useUsageGuard from "../hook/useUsageGuard";
 import Btn from "../component/Btn";
@@ -22,9 +21,8 @@ export default function PhotoRestoration() {
   const [loading, setLoading] = useState(false);
   const [processedImage, setProcessedImage] = useState(null);
   const [isModalVisible, setModalVisible] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const navigation = useNavigation();
-
-
 
   const tutorialSteps = [
     {
@@ -150,14 +148,18 @@ export default function PhotoRestoration() {
     }
   };
 
-const downloadImage = async () => {
-  if (!processedImage) {
-    Alert.alert("Error", "No image to download!");
-    return;
-  }
+  const downloadImage = async () => {
+    if (!processedImage) return;
+    try {
+      setDownloading(true);
+      await downloadImageFile(processedImage, "restored");
+    } catch (err) {
+      console.error("Download failed", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
-  await downloadImageFile(processedImage, "restored");
-};
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
       <Modal
@@ -203,9 +205,9 @@ const downloadImage = async () => {
             )}
 
             {image && (
-              <View>
-                <Text style={styles.resultText}>Selected Image</Text>
-                <Image source={{ uri: image }} style={styles.image} />
+              <View style={styles.imageWrapper}>
+                <Text style={styles.imageLabel}>Selected Image</Text>
+                <Image source={{ uri: image }} style={styles.uploadedImage} />
               </View>
             )}
 
@@ -221,13 +223,20 @@ const downloadImage = async () => {
             {loading && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
 
             {processedImage && (
-              <View>
-                <Text style={styles.resultText}>Result Image</Text>
-                <Image source={{ uri: processedImage }} style={styles.image} />
-
-                <Btn title="Download Image"
-                  onPress={downloadImage} />
-
+              <View style={styles.imageWrapper}>
+                <Text style={styles.imageLabel}>Result</Text>
+                <Image source={{ uri: processedImage }} style={styles.uploadedImage} />
+                {downloading ? (
+                  <View style={{ marginTop: 10 }}>
+                    <ActivityIndicator size="large" color="#ffffff" />
+                    <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                  </View>
+                ) : (
+                  <Btn
+                    title="Download Image"
+                    onPress={downloadImage}
+                  />
+                )}
               </View>
             )}
           </View>
@@ -283,6 +292,32 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 20,
+  },
+  imageWrapper: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    padding: 20,
+    marginVertical: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    width: '85%',
+  },
+  imageLabel: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#ffffff",
+    marginBottom: 10,
+  },
+    uploadedImage: {
+    width: 200,
+    height: 200,
+    marginTop: 0,
+    marginBottom: 30,
+    borderRadius: 10,
+    resizeMode: "contain",
   },
   title: {
     color: "#fff",
