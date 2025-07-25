@@ -1,4 +1,4 @@
-package com.aiapp
+package com.mbimage
 
 import android.app.Application
 import com.facebook.react.PackageList

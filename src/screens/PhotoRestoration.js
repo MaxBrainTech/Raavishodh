@@ -14,7 +14,6 @@ import { downloadImageFile } from "../utils/downloadImage";
 import useUsageGuard from "../hook/useUsageGuard";
 import Btn from "../component/Btn";
 
-
 export default function PhotoRestoration() {
   const [showTutorial, setShowTutorial] = useState(true);
   const [image, setImage] = useState(null);
@@ -28,7 +27,7 @@ export default function PhotoRestoration() {
     {
       title: "Upload Your Image",
       description:
-        "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+        "\u2022 Click the button below to select an image.\n\u2022 Max file size: 10MB.\n\u2022 Supported formats: JPEG, PNG, WebP.",
     }
   ];
 
@@ -36,8 +35,7 @@ export default function PhotoRestoration() {
     usageCount,
     incrementUsage,
     checkUsage,
-  } = useUsageGuard("ghibli_usage_count");
-
+  } = useUsageGuard("photo_restoration_usage");
 
   const openImagePicker = () => {
     Alert.alert("Choose an Option", "Select an option to upload an image.", [
@@ -71,7 +69,6 @@ export default function PhotoRestoration() {
     setShowTutorial(false);
   };
 
-
   const generateNewFeatureImage = async () => {
     if (!image) {
       Alert.alert("Error", "Please select an image first.");
@@ -100,25 +97,22 @@ export default function PhotoRestoration() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to process image");
-      }
-
       const data = await response.json();
-      const resultUrl = await checkReplicateStatus(data.urls.get);
+      if (data.error || !data.urls?.get) throw new Error(data.error || "Failed to start prediction");
 
+      const resultUrl = await checkReplicateStatus(data.urls.get);
       if (resultUrl) {
         setProcessedImage(resultUrl);
         incrementUsage();
       } else {
-        Alert.alert("Error", "Failed to get processed image.");
+        throw new Error("Processing failed with status: failed");
       }
     } catch (error) {
       console.error("Error processing image:", error);
-      Alert.alert("Error", "An error occurred while processing the image.");
+      Alert.alert("Error", error.message || "An error occurred while processing the image.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const checkReplicateStatus = async (statusUrl) => {
@@ -127,10 +121,6 @@ export default function PhotoRestoration() {
         const response = await fetch(statusUrl, {
           headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` },
         });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch status");
-        }
 
         const data = await response.json();
 
@@ -170,11 +160,9 @@ export default function PhotoRestoration() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContentContainer}>
-            <TouchableOpacity style={styles.closeButton}
-              onPress={() => setModalVisible(false)}>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
               <Text style={styles.closeButtonText}>X</Text>
             </TouchableOpacity>
-
             <FastImage
               source={require("../../assets/gif/PhotoRestoration.png")}
               style={styles.gif}
@@ -183,15 +171,13 @@ export default function PhotoRestoration() {
           </View>
         </View>
       </Modal>
+
       <FlatList
         data={[]}
         keyExtractor={(_, index) => index.toString()}
         ListHeaderComponent={
           <View style={styles.container}>
-            <FeatureLayout
-              title="Photo Restoration"
-              description="Restore your Old Photos with AI"
-            />
+            <FeatureLayout title="Photo Restoration" description="Restore your Old Photos with AI" />
 
             {!image && showTutorial && (
               <View style={styles.tutorialContainer}>
@@ -200,9 +186,7 @@ export default function PhotoRestoration() {
               </View>
             )}
 
-            {!image && (
-              <Btn title="Upload Image" onPress={openImagePicker} />
-            )}
+            {!image && <Btn title="Upload Image" onPress={openImagePicker} />}
 
             {image && (
               <View style={styles.imageWrapper}>
@@ -213,10 +197,7 @@ export default function PhotoRestoration() {
 
             {image && !processedImage && (
               <View style={styles.button}>
-                <Btn title="Generate Image"
-                  onPress={generateNewFeatureImage}
-                  disabled={loading} />
-
+                <Btn title="Generate Image" onPress={generateNewFeatureImage} disabled={loading} />
               </View>
             )}
 
@@ -232,10 +213,7 @@ export default function PhotoRestoration() {
                     <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
                   </View>
                 ) : (
-                  <Btn
-                    title="Download Image"
-                    onPress={downloadImage}
-                  />
+                  <Btn title="Download Image" onPress={downloadImage} />
                 )}
               </View>
             )}
@@ -247,14 +225,8 @@ export default function PhotoRestoration() {
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    padding: 10,
-    alignItems: "center",
-  },
+  gradient: { flex: 1 },
+  container: { flex: 1, padding: 10, alignItems: "center" },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(70, 71, 77, 0.85)',
@@ -278,21 +250,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     zIndex: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 5,
   },
-  closeButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  gif: {
-    width: 260,
-    height: 260,
+  closeButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  gif: { width: 260, height: 260, borderRadius: 20 },
+  tutorialContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 16,
     borderRadius: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
+  tutorialTitle: { color: "#ffffff", fontSize: 20, fontWeight: "600", marginBottom: 8 },
+  tutorialText: { color: "#d1d5db", fontSize: 14, textAlign: 'left', lineHeight: 20 },
   imageWrapper: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 20,
@@ -305,75 +276,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     width: '85%',
   },
-  imageLabel: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#ffffff",
-    marginBottom: 10,
-  },
-    uploadedImage: {
-    width: 200,
-    height: 200,
-    marginTop: 0,
-    marginBottom: 30,
-    borderRadius: 10,
-    resizeMode: "contain",
-  },
-  title: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  subtitle: {
-    color: "#fff",
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  tutorialContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  tutorialTitle: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  tutorialText: {
-    color: "#d1d5db",
-    fontSize: 14,
-    textAlign: 'left',
-    lineHeight: 20,
-  },
-  image: {
-    width: 200,
-    height: 200,
-    marginTop: 10,
-    borderRadius: 10,
-    marginBottom: 20,
-    alignSelf: "center",
-  },
-  loader: {
-    marginTop: 10,
-  },
-  resultText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 5,
-    alignSelf: 'center'
-  },
-
+  imageLabel: { fontSize: 20, fontWeight: "600", color: "#ffffff", marginBottom: 10 },
+  uploadedImage: { width: 200, height: 200, marginBottom: 30, borderRadius: 10, resizeMode: "contain" },
+  button: { marginVertical: 10 },
+  loader: { marginTop: 10 },
 });

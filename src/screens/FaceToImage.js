@@ -8,7 +8,7 @@ import { launchImageLibrary, launchCamera } from "react-native-image-picker";
 import FeatureLayout from "../component/FeatureLayout";
 import RNFS from "react-native-fs";
 import axios from "axios";
-import { REPLICATE_API_TOKEN } from "@env";
+import { REPLICATE_API_TOKEN } from '@env';
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
 import { request, PERMISSIONS } from 'react-native-permissions';
@@ -27,6 +27,7 @@ const tutorialSteps = [
 export default function FaceToImage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showTutorial, setShowTutorial] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [readyToGenerate, setReadyToGenerate] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -164,10 +165,18 @@ export default function FaceToImage() {
     setProcessing(false);
   };
 
-  const downloadImage = async () => {
-    if (!enhancedImage) return;
+const downloadImage = async (url) => {
+  if (!url) return;
+  try {
+    setDownloading(true);
+    await downloadImageFile(url, "face2image");
+  } catch (err) {
+    console.error("Download failed", err);
+    Alert.alert("Download Failed", err.message || "Could not download the image.");
+  } finally {
+    setDownloading(false);
+  }
 
-    await downloadImageFile(enhancedImage, "face2image");
 
   };
 
@@ -269,7 +278,7 @@ export default function FaceToImage() {
                       ) : (
                         <Btn
                           title="Download Image"
-                          onPress={downloadImage}
+                          onPress={() => downloadImage(item)} 
                         />
                       )}
                     </View>

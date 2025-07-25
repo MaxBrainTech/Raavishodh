@@ -11,21 +11,15 @@ import { REPLICATE_API_TOKEN } from '@env';
 import useUsageGuard from "../hook/useUsageGuard";
 import { downloadImageFile } from "../utils/downloadImage";
 
-export default function TextToImage({ navigation }) {
+export default function TextToImage() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState(null);
-  const [buttonVisible, setButtonVisible] = useState(true);
   const [generateClicked, setGenerateClicked] = useState(false);
   const [isModalVisible, setModalVisible] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
-  const {
-    usageCount,
-    incrementUsage,
-    checkUsage,
-  } = useUsageGuard("ghibli_usage_count");
-
+  const { checkUsage, incrementUsage } = useUsageGuard("ghibli_usage_count");
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -36,6 +30,11 @@ export default function TextToImage({ navigation }) {
     const allowed = checkUsage();
     if (!allowed) return;
 
+    if (!REPLICATE_API_TOKEN) {
+      Alert.alert("Token Error", "Replicate API token is missing or not loaded from .env");
+      return;
+    }
+
     setLoading(true);
     setGenerateClicked(false);
     setImageUrl(null);
@@ -44,11 +43,11 @@ export default function TextToImage({ navigation }) {
       const response = await axios.post(
         "https://api.replicate.com/v1/predictions",
         {
-          version: "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc", // Correct version ID
+          version: "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
           input: {
             width: 768,
             height: 768,
-            prompt: prompt,
+            prompt,
             refine: "expert_ensemble_refiner",
             scheduler: "K_EULER",
             lora_scale: 0.6,
@@ -69,17 +68,13 @@ export default function TextToImage({ navigation }) {
         }
       );
 
-      if (response.data.error) {
-        throw new Error(response.data.error);
-      }
+      if (response.data.error) throw new Error(response.data.error);
 
       const predictionId = response.data.id;
       let imageResult = null;
 
-
       while (!imageResult) {
         await new Promise(resolve => setTimeout(resolve, 2000));
-
         const statusResponse = await axios.get(
           `https://api.replicate.com/v1/predictions/${predictionId}`,
           {
@@ -108,7 +103,6 @@ export default function TextToImage({ navigation }) {
 
   const downloadImage = async () => {
     if (!imageUrl) return;
-
     try {
       setDownloading(true);
       await downloadImageFile(imageUrl, "generated");
@@ -134,7 +128,6 @@ export default function TextToImage({ navigation }) {
                 onPress={() => setModalVisible(false)}>
                 <Text style={styles.closeButtonText}>X</Text>
               </TouchableOpacity>
-
               <FastImage
                 source={require("../../assets/gif/TextToImage.png")}
                 style={styles.gif}
@@ -143,6 +136,7 @@ export default function TextToImage({ navigation }) {
             </View>
           </View>
         </Modal>
+
         <View style={styles.container}>
           <Text style={styles.title}>Text to Image Generation</Text>
           <Text style={styles.subtitle}>Generate amazing images from your text descriptions.</Text>
@@ -157,17 +151,15 @@ export default function TextToImage({ navigation }) {
             />
           </View>
 
-
-          {!generateClicked && buttonVisible && (
+          {!generateClicked && (
             <View style={styles.buttonContainer}>
               <Btn onPress={handleGenerate} title="Generate Image" loading={loading} />
             </View>
           )}
 
-
           {loading && <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />}
 
-       {imageUrl && (
+          {imageUrl && (
             <>
               <View style={styles.imageWrapper}>
                 <Text style={styles.imageLabel}>Result</Text>
@@ -181,10 +173,7 @@ export default function TextToImage({ navigation }) {
                     <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
                   </View>
                 ) : (
-                  <Btn
-                    title="Download Image"
-                    onPress={downloadImage}
-                  />
+                  <Btn title="Download Image" onPress={downloadImage} />
                 )}
               </View>
             </>
@@ -225,10 +214,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     zIndex: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 5,
   },
   closeButtonText: {
     color: "#fff",
@@ -279,23 +264,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(231, 230, 236, 0.57)',
     borderRadius: 5,
     marginBottom: 10,
-
   },
   generatedImage: {
-     width: 200,
+    width: 200,
     height: 200,
-    marginTop: 0,
     marginBottom: 30,
     borderRadius: 10,
     resizeMode: "contain",
   },
-   imageWrapper: {
+  imageWrapper: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 20,
     padding: 20,
     marginVertical: 20,
     alignItems: "center",
-    alignSelf:'center',
+    alignSelf: 'center',
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 10,

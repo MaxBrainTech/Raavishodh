@@ -22,12 +22,16 @@ export default function LoginScreen({ navigation }) {
 
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: '355264972279-u17sv9oe918lj76stnimc1sm9kqs31k8.apps.googleusercontent.com',
+      webClientId:"282300022667-cbrqnv08k30j5bglc4pfjchesop925fk.apps.googleusercontent.com",
       offlineAccess: true,
     });
   }, []);
 
   const handleLogin = async () => {
+      if (!email.trim() || !password.trim()) {
+    Alert.alert('Missing Fields', 'Please enter both email and password.');
+    return;
+  }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;

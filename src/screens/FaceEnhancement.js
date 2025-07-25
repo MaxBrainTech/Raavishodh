@@ -26,6 +26,7 @@ export default function FaceEnhancement() {
 
   const navigation = useNavigation();
 
+
   const {
     usageCount,
     incrementUsage,
@@ -96,7 +97,9 @@ export default function FaceEnhancement() {
     setEnhancedImage(null);
 
     try {
+       console.log("Selected URI:", imageUri);
       const base64Image = await RNFS.readFile(imageUri, "base64");
+console.log("Base64 size:", base64Image.length);
 
       const response = await fetch("https://api.replicate.com/v1/predictions", {
         method: "POST",
@@ -115,6 +118,8 @@ export default function FaceEnhancement() {
       });
 
       let prediction = await response.json();
+       console.log("Initial Prediction:", prediction);
+
       if (prediction?.error) throw new Error(prediction.error);
 
       while (
@@ -129,15 +134,19 @@ export default function FaceEnhancement() {
           }
         );
         prediction = await pollRes.json();
+         console.log("Polling result:", prediction);
       }
 
       if (prediction.status === "succeeded") {
+        console.log("Prediction output:", prediction.output);
         setEnhancedImage(prediction.output);
         incrementUsage();
       } else {
-        throw new Error("Image enhancement failed.");
+         console.error("Prediction failed:", prediction);
+        throw new Error("Image enhancement failed: " + prediction.error || prediction.status);
       }
     } catch (err) {
+       console.error("Process Error:", err);
       Alert.alert("Error", err.message || "Failed to enhance image");
       console.error(err);
     } finally {

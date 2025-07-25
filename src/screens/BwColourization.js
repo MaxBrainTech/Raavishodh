@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View, Text, Image, StyleSheet,
   FlatList, ActivityIndicator, Alert, Modal, TouchableOpacity
@@ -10,7 +10,6 @@ import FeatureLayout from "../component/FeatureLayout";
 import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from '@env';
 import Btn from "../component/Btn";
-import { useNavigation } from '@react-navigation/native';
 import { downloadImageFile } from "../utils/downloadImage";
 import useUsageGuard from "../hook/useUsageGuard";
 
@@ -22,22 +21,13 @@ export default function BwColourization() {
   const [isModalVisible, setModalVisible] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
-  const navigation = useNavigation();
+  const { checkUsage, incrementUsage } = useUsageGuard("bw_color_usage");
 
-  const tutorialSteps = [
-    {
-      title: "Upload Your Image",
-      description:
-        "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
-    }
-  ];
-
-  const {
-    usageCount,
-    incrementUsage,
-    checkUsage,
-  } = useUsageGuard("bw_color_usage");
-
+  const tutorialSteps = [{
+    title: "Upload Your Image",
+    description:
+      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+  }];
 
   const openImagePicker = () => {
     Alert.alert("Choose an Option", "Select an option to upload an image.", [
@@ -47,7 +37,7 @@ export default function BwColourization() {
     ]);
   };
 
-  const openCamera = async () => {
+  const openCamera = () => {
     if (!checkUsage()) return;
     launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
@@ -56,7 +46,7 @@ export default function BwColourization() {
     });
   };
 
-  const openGallery = async () => {
+  const openGallery = () => {
     if (!checkUsage()) return;
     launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
@@ -71,10 +61,14 @@ export default function BwColourization() {
     setShowTutorial(false);
   };
 
-
   const generateColorizedImage = async () => {
     if (!image) {
       Alert.alert("Error", "Please select an image first.");
+      return;
+    }
+
+    if (!REPLICATE_API_TOKEN) {
+      Alert.alert("Token Error", "Replicate API token is missing.");
       return;
     }
 
@@ -82,6 +76,7 @@ export default function BwColourization() {
 
     try {
       const base64Image = await RNFS.readFile(image, "base64");
+
       const response = await fetch("https://api.replicate.com/v1/predictions", {
         method: "POST",
         headers: {
@@ -97,25 +92,23 @@ export default function BwColourization() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to process image");
-      }
+      if (!response.ok) throw new Error("Failed to process image");
 
       const data = await response.json();
       const resultUrl = await checkReplicateStatus(data.urls.get);
 
       if (resultUrl) {
         setProcessedImage(resultUrl);
-         incrementUsage();
+        incrementUsage();
       } else {
-        Alert.alert("Error", "Failed to get processed image.");
+        Alert.alert("Error", "Image generation failed.");
       }
     } catch (error) {
-      console.error("Error processing image:", error);
-      Alert.alert("Error", "An error occurred while processing the image.");
+      console.error("Processing error:", error);
+      Alert.alert("Error", "An error occurred during image processing.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const checkReplicateStatus = async (statusUrl) => {
@@ -125,22 +118,17 @@ export default function BwColourization() {
           headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` },
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch status");
-        }
+        if (!response.ok) throw new Error("Status fetch failed");
 
         const data = await response.json();
 
-        if (data.status === "succeeded") {
-          return data.output;
-        } else if (data.status === "failed") {
-          return null;
-        }
+        if (data.status === "succeeded") return data.output;
+        if (data.status === "failed") return null;
 
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     } catch (error) {
-      console.error("Error checking status:", error);
+      console.error("Status check error:", error);
       return null;
     }
   };
@@ -160,13 +148,13 @@ export default function BwColourization() {
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
       <FlatList
-        data={[]}
+        data={[]} // Empty list to allow header-only scroll
         keyExtractor={(_, index) => index.toString()}
         ListHeaderComponent={
           <View style={styles.container}>
             <Modal
               animationType="slide"
-              transparent={true}
+              transparent
               visible={isModalVisible}
               onRequestClose={() => setModalVisible(false)}
             >
@@ -176,7 +164,6 @@ export default function BwColourization() {
                     onPress={() => setModalVisible(false)}>
                     <Text style={styles.closeButtonText}>X</Text>
                   </TouchableOpacity>
-
                   <FastImage
                     source={require("../../assets/gif/B&W.png")}
                     style={styles.gif}
@@ -185,10 +172,10 @@ export default function BwColourization() {
                 </View>
               </View>
             </Modal>
+
             <FeatureLayout
               title="B & W Colorization"
-              description=" Bring black & white photos to life with colors."
-
+              description="Bring black & white photos to life with colors."
             />
 
             {!image && showTutorial && (
@@ -199,10 +186,7 @@ export default function BwColourization() {
             )}
 
             {!image && (
-              <Btn
-                title="Upload Image"
-                onPress={openImagePicker}>
-              </Btn>
+              <Btn title="Upload Image" onPress={openImagePicker} />
             )}
 
             {image && (
@@ -214,11 +198,7 @@ export default function BwColourization() {
 
             {image && !processedImage && (
               <View style={styles.button}>
-                <Btn
-                  title="Generate Image"
-                  onPress={generateColorizedImage}
-                  disabled={loading}
-                />
+                <Btn title="Generate Image" onPress={generateColorizedImage} disabled={loading} />
               </View>
             )}
 
@@ -227,121 +207,93 @@ export default function BwColourization() {
             {processedImage && (
               <View style={styles.imageWrapper}>
                 <Text style={styles.imageLabel}>Result</Text>
-                <Image source={{ uri: processedImage  }} style={styles.uploadedImage} />
+                <Image source={{ uri: processedImage }} style={styles.uploadedImage} />
                 {downloading ? (
                   <View style={{ marginTop: 10 }}>
                     <ActivityIndicator size="large" color="#ffffff" />
                     <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
                   </View>
                 ) : (
-                  <Btn
-                    title="Download Image"
-                    onPress={downloadImage}
-                  />
+                  <Btn title="Download Image" onPress={downloadImage} />
                 )}
               </View>
             )}
           </View>
         }
       />
-          </LinearGradient>
+    </LinearGradient>
   );
 }
 
-      const styles = StyleSheet.create({
-        gradient: {
-        flex: 1,
+const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
   },
-      container: {
-        flex: 1,
-      padding: 10,
-      alignItems: "center",
+  container: {
+    flex: 1,
+    padding: 10,
+    alignItems: "center",
   },
-      modalOverlay: {
-        flex: 1,
-      backgroundColor: 'rgba(70, 71, 77, 0.85)',
-      justifyContent: 'center',
-      alignItems: 'center',
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(70, 71, 77, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-      modalContentContainer: {
-        backgroundColor: "rgba(255,255,255,0.05)",
-      padding: 20,
-      borderRadius: 25,
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.2)",
+  modalContentContainer: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    padding: 20,
+    borderRadius: 25,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
-      closeButton: {
-        position: 'absolute',
-      top: 10,
-      right: 10,
-      backgroundColor: '#222',
-      borderRadius: 16,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      zIndex: 10,
-      shadowColor: '#000',
-      shadowOpacity: 0.25,
-      shadowRadius: 6,
-      elevation: 5,
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#222',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
   },
-      closeButtonText: {
-        color: "#fff",
-      fontSize: 18,
-      fontWeight: "bold",
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
   },
-      gif: {
-        width: 260,
-      height: 260,
-      borderRadius: 20,
+  gif: {
+    width: 260,
+    height: 260,
+    borderRadius: 20,
   },
-      title: {
-        color: "#fff",
-      fontSize: 24,
-      fontWeight: "bold",
-      marginBottom: 20,
+  tutorialContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-      subtitle: {
-        color: "#fff",
-      fontSize: 16,
-      textAlign: 'center',
-      marginBottom: 20,
+  tutorialTitle: {
+    color: "#ffffff",
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 8,
   },
-      tutorialContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      padding: 16,
-      borderRadius: 20,
-      marginBottom: 20,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.2)',
-      shadowColor: "#000",
-      shadowOffset: {width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
+  tutorialText: {
+    color: "#d1d5db",
+    fontSize: 14,
+    textAlign: 'left',
+    lineHeight: 20,
   },
-      tutorialTitle: {
-        color: "#ffffff",
-      fontSize: 20,
-      fontWeight: "600",
-      marginBottom: 8,
-  },
-      tutorialText: {
-        color: "#d1d5db",
-      fontSize: 14,
-      textAlign: 'left',
-      lineHeight: 20,
-  },
-      image: {
-        width: 200,
-      height: 200,
-      marginTop: 10,
-      borderRadius: 10,
-      marginBottom: 20,
-      alignSelf: "center",
-      resizeMode: 'contain'
-  },
- imageWrapper: {
+  imageWrapper: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 20,
     padding: 20,
@@ -359,23 +311,17 @@ export default function BwColourization() {
     color: "#ffffff",
     marginBottom: 10,
   },
-    uploadedImage: {
+  uploadedImage: {
     width: 200,
     height: 200,
-    marginTop: 0,
     marginBottom: 30,
     borderRadius: 10,
     resizeMode: "contain",
   },
-      loader: {
-        marginTop: 10,
+  button: {
+    marginBottom: 20,
   },
-      resultText: {
-        color: "#fff",
-      fontSize: 18,
-      fontWeight: "bold",
-      marginTop: 10,
-      marginBottom: 5,
-      alignSelf: 'center'
+  loader: {
+    marginTop: 10,
   },
 });

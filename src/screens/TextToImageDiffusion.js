@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View, Text, TextInput, Image, Modal, TouchableOpacity,
   ActivityIndicator, Alert, StyleSheet, FlatList
@@ -20,38 +20,33 @@ export default function TextToImageDiffusion({ navigation }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setModalVisible] = useState(true);
-    const [downloading, setDownloading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
-  const {
-    usageCount,
-    incrementUsage,
-    checkUsage,
-  } = useUsageGuard("ghibli_usage_count");
-
+  const { checkUsage, incrementUsage } = useUsageGuard("text_diffusion_usage");
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       Alert.alert("Error", "Please enter a prompt before generating.");
       return;
     }
-
-    const allowed = checkUsage();
-    if (!allowed) return;
+    if (!checkUsage()) return;
+    if (!REPLICATE_API_TOKEN) {
+      Alert.alert("Configuration Error", "Missing REPLICATE_API_TOKEN in .env");
+      return;
+    }
 
     setLoading(true);
     setImageUrl(null);
 
     try {
-
       const response = await axios.post(
         "https://api.replicate.com/v1/predictions",
         {
-          version:
-            "ac732df83cea7fff18b8472768c88ad041fa750ff7682a21affe81863cbe77e4",
+          version: "ac732df83cea7fff18b8472768c88ad041fa750ff7682a21affe81863cbe77e4",
           input: {
             width: 768,
             height: 768,
-            prompt: prompt,
+            prompt,
             scheduler: "K_EULER",
             num_outputs: 1,
             guidance_scale: guidanceScale,
@@ -66,74 +61,62 @@ export default function TextToImageDiffusion({ navigation }) {
         }
       );
 
-      console.log("Response Data:", response.data);
-
-      if (response.data.error) {
-        Alert.alert("Error", response.data.error);
-        setLoading(false);
-        return;
-      }
-
-
       let prediction = response.data;
-      let status = prediction.status;
+      if (!prediction?.id) throw new Error("Invalid response from Replicate");
 
-      while (status === "starting" || status === "processing") {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      while (["starting", "processing"].includes(prediction.status)) {
+        await new Promise(res => setTimeout(res, 2000));
         const pollResponse = await axios.get(prediction.urls.get, {
-          headers: {
-            Authorization: `Token ${REPLICATE_API_TOKEN}`,
-          },
+          headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` },
         });
         prediction = pollResponse.data;
-        status = prediction.status;
-        console.log("Polling status:", status);
       }
 
-
-      if (prediction.output) {
+      if (prediction.status === "succeeded" && prediction.output?.[0]) {
         setImageUrl(prediction.output[0]);
         incrementUsage();
       } else {
-        Alert.alert("Error", "Failed to generate image.");
+        throw new Error(
+          prediction.status === "failed"
+            ? "Image generation failed on server."
+            : `Unexpected status: ${prediction.status}`
+        );
       }
-    } catch (error) {
-      console.error("Error generating image:", error);
-      Alert.alert("Error", "Failed to generate image. Please try again.");
+    } catch (err) {
+      const msg = axios.isAxiosError(err) && err.response?.status === 401
+        ? "Authentication failed (401). Check your API token."
+        : err.message;
+      console.error("Generation Error:", err);
+      Alert.alert("Error", msg || "Failed to generate image. Try again later.");
     } finally {
       setLoading(false);
     }
   };
 
   const downloadImage = async () => {
-     if (!imageUrl) return;
- 
-     try {
-       setDownloading(true);
-       await downloadImageFile(imageUrl, "generated");
-     } catch (err) {
-       console.error("Download failed", err);
-     } finally {
-       setDownloading(false);
-     }
-   };
-
+    if (!imageUrl) return;
+    setDownloading(true);
+    try {
+      await downloadImageFile(imageUrl, "diffusion");
+    } catch (err) {
+      console.error("Download failed:", err);
+      Alert.alert("Error", "Failed to download image.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <Modal visible={isModalVisible} transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContentContainer}>
-            <TouchableOpacity style={styles.closeButton}
-              onPress={() => setModalVisible(false)}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
               <Text style={styles.closeButtonText}>X</Text>
             </TouchableOpacity>
-
             <FastImage
               source={require("../../assets/gif/StableDiffusion.png")}
               style={styles.gif}
@@ -142,23 +125,27 @@ export default function TextToImageDiffusion({ navigation }) {
           </View>
         </View>
       </Modal>
+
       <FlatList
         data={[]}
-        keyExtractor={(_, index) => index.toString()}
+        keyExtractor={(_, idx) => idx.toString()}
         ListHeaderComponent={
           <View style={styles.container}>
             <Text style={styles.title}>Text to Image Diffusion</Text>
 
             <Card style={styles.card}>
-              <Text style={styles.label}>Enter your prompt</Text>
+              <Text style={styles.label}>Prompt:</Text>
               <TextInput
-                placeholder="Describe the image you want to generate..."
+                placeholder="Describe the image..."
                 value={prompt}
                 onChangeText={setPrompt}
                 style={styles.input}
                 placeholderTextColor="#888"
               />
-              <Text style={styles.label}>Guidance Scale: {guidanceScale.toFixed(1)}</Text>
+
+              <Text style={styles.label}>
+                Guidance Scale: {guidanceScale.toFixed(1)}
+              </Text>
               <Slider
                 value={guidanceScale}
                 onValueChange={setGuidanceScale}
@@ -167,6 +154,7 @@ export default function TextToImageDiffusion({ navigation }) {
                 step={0.5}
                 style={styles.slider}
               />
+
               <Text style={styles.label}>Inference Steps: {inferenceSteps}</Text>
               <Slider
                 value={inferenceSteps}
@@ -177,12 +165,14 @@ export default function TextToImageDiffusion({ navigation }) {
                 style={styles.slider}
               />
 
-              <View style={styles.button}>
-                <Btn title="Generate Image" onPress={handleGenerate} disabled={loading} />
-              </View>
+              <Btn
+                title="Generate Image"
+                onPress={handleGenerate}
+                disabled={loading}
+              />
             </Card>
 
-            {loading && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
+            {loading && <ActivityIndicator style={styles.loader} size="large" color="#fff" />}
 
             {imageUrl && (
               <>
@@ -191,19 +181,11 @@ export default function TextToImageDiffusion({ navigation }) {
                   <Image source={{ uri: imageUrl }} style={styles.generatedImage} />
                 </View>
 
-                <View style={styles.buttonContainer}>
-                  {downloading ? (
-                    <View style={{ marginTop: 10 }}>
-                      <ActivityIndicator size="large" color="#ffffff" />
-                      <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
-                    </View>
-                  ) : (
-                    <Btn
-                      title="Download Image"
-                      onPress={downloadImage}
-                    />
-                  )}
-                </View>
+                <Btn
+                  title={downloading ? "Downloading..." : "Download Image"}
+                  onPress={downloadImage}
+                  disabled={downloading}
+                />
               </>
             )}
           </View>
@@ -212,113 +194,63 @@ export default function TextToImageDiffusion({ navigation }) {
     </LinearGradient>
   );
 }
+
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
-  container: {
-    padding: 16,
-    alignItems: "center",
-  },
+  gradient: { flex: 1 },
+  container: { padding: 16, alignItems: "center" },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(70, 71, 77, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContentContainer: {
-    backgroundColor: "rgba(255,255,255,0.05)",
     padding: 20,
-    borderRadius: 25,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 20,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
   },
   closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: '#222',
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 5,
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "#222",
+    padding: 6,
+    borderRadius: 14,
   },
-  closeButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  gif: {
-    width: 260,
-    height: 260,
-    borderRadius: 20,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
+  closeButtonText: { color: "#fff", fontSize: 16 },
+  gif: { width: 240, height: 240 },
+  title: { color: "#fff", fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   card: {
     width: "100%",
     padding: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    // borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 12,
+    marginBottom: 16,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 5,
-    color: "#fff",
-  },
+  label: { color: "#fff", fontWeight: "bold", marginTop: 10 },
   input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    backgroundColor: 'rgba(231, 230, 236, 0.57)',
+    backgroundColor: "rgba(255,255,255,0.3)",
     padding: 10,
+    color: "#000",
     borderRadius: 5,
-    marginBottom: 10,
+    marginTop: 5,
   },
-  slider: {
-    marginBottom: 20,
-  },
-  button: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  loader: {
-    marginTop: 20,
-  },
-imageWrapper: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20,
+  slider: { marginVertical: 10 },
+  loader: { marginVertical: 20 },
+  imageWrapper: {
+    backgroundColor: "rgba(255,255,255,0.1)",
     padding: 20,
-    marginVertical: 20,
+    borderRadius: 12,
     alignItems: "center",
-    alignSelf:'center',
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    width: '85%',
+    marginVertical: 20,
+    width: "90%",
   },
-  imageLabel: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#ffffff",
-    marginBottom: 10,
-  },
-   generatedImage: {
-     width: 200,
-    height: 200,
-    marginTop: 0,
-    marginBottom: 30,
-    borderRadius: 10,
+  imageLabel: { color: "#fff", fontSize: 20, marginBottom: 10 },
+  generatedImage: {
+    width: 250,
+    height: 250,
     resizeMode: "contain",
+    borderRadius: 10,
   },
 });

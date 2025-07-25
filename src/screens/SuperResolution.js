@@ -8,7 +8,7 @@ import FastImage from 'react-native-fast-image';
 import LinearGradient from "react-native-linear-gradient";
 import FeatureLayout from "../component/FeatureLayout";
 import RNFS from "react-native-fs";
-import { REPLICATE_API_TOKEN } from "@env";
+import { REPLICATE_API_TOKEN } from '@env';
 import Btn from "../component/Btn";
 import { useNavigation } from "@react-navigation/native";
 import { downloadImageFile } from "../utils/downloadImage";

@@ -36,7 +36,7 @@ export default function GhiblifyScreen({ navigation }) {
     checkUsage,
   } = useUsageGuard("ghibli_usage_count");
 
-
+ 
   const openImagePicker = () => {
     Alert.alert("Choose an Option", "Select an option to upload an image.", [
       { text: "Camera", onPress: openCamera },
