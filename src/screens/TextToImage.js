@@ -1,15 +1,24 @@
 import React, { useState } from "react";
 import {
-  View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, Image,
-  Modal, TouchableOpacity, ScrollView
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Image,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
 } from "react-native";
-import FastImage from 'react-native-fast-image';
+import FastImage from "react-native-fast-image";
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
 import axios from "axios";
-import { REPLICATE_API_TOKEN } from '@env';
+import { REPLICATE_API_TOKEN } from "@env";
 import useUsageGuard from "../hook/useUsageGuard";
 import { downloadImageFile } from "../utils/downloadImage";
+import globalStyles from "../styles/globalStyles";
 
 export default function TextToImage() {
   const [prompt, setPrompt] = useState("");
@@ -19,7 +28,7 @@ export default function TextToImage() {
   const [isModalVisible, setModalVisible] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
-  const { checkUsage, incrementUsage } = useUsageGuard("ghibli_usage_count");
+  const { checkUsage, incrementUsage } = useUsageGuard("ai_usage_count");
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -31,7 +40,10 @@ export default function TextToImage() {
     if (!allowed) return;
 
     if (!REPLICATE_API_TOKEN) {
-      Alert.alert("Token Error", "Replicate API token is missing or not loaded from .env");
+      Alert.alert(
+        "Token Error",
+        "Replicate API token is missing or not loaded from .env"
+      );
       return;
     }
 
@@ -43,7 +55,8 @@ export default function TextToImage() {
       const response = await axios.post(
         "https://api.replicate.com/v1/predictions",
         {
-          version: "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
+          version:
+            "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
           input: {
             width: 768,
             height: 768,
@@ -57,14 +70,14 @@ export default function TextToImage() {
             high_noise_frac: 0.8,
             negative_prompt: "",
             prompt_strength: 0.8,
-            num_inference_steps: 25
-          }
+            num_inference_steps: 25,
+          },
         },
         {
           headers: {
-            "Authorization": `Token ${REPLICATE_API_TOKEN}`,
-            "Content-Type": "application/json"
-          }
+            Authorization: `Token ${REPLICATE_API_TOKEN}`,
+            "Content-Type": "application/json",
+          },
         }
       );
 
@@ -74,13 +87,13 @@ export default function TextToImage() {
       let imageResult = null;
 
       while (!imageResult) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         const statusResponse = await axios.get(
           `https://api.replicate.com/v1/predictions/${predictionId}`,
           {
             headers: {
-              "Authorization": `Token ${REPLICATE_API_TOKEN}`
-            }
+              Authorization: `Token ${REPLICATE_API_TOKEN}`,
+            },
           }
         );
 
@@ -114,23 +127,26 @@ export default function TextToImage() {
   };
 
   return (
-    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={globalStyles.gradient}>
+      <ScrollView contentContainerStyle={globalStyles.scrollContainer}>
+        {/* Info Modal (GIF) */}
         <Modal
           animationType="slide"
           transparent={true}
           visible={isModalVisible}
           onRequestClose={() => setModalVisible(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContentContainer}>
-              <TouchableOpacity style={styles.closeButton}
-                onPress={() => setModalVisible(false)}>
-                <Text style={styles.closeButtonText}>X</Text>
+          <View style={globalStyles.modalOverlay}>
+            <View style={globalStyles.modalContentContainer}>
+              <TouchableOpacity
+                style={globalStyles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={globalStyles.closeButtonText}>X</Text>
               </TouchableOpacity>
               <FastImage
                 source={require("../../assets/gif/TextToImage.png")}
-                style={styles.gif}
+                style={globalStyles.gif}
                 resizeMode={FastImage.resizeMode.contain}
               />
             </View>
@@ -139,7 +155,9 @@ export default function TextToImage() {
 
         <View style={styles.container}>
           <Text style={styles.title}>Text to Image Generation</Text>
-          <Text style={styles.subtitle}>Generate amazing images from your text descriptions.</Text>
+          <Text style={styles.subtitle}>
+            Generate amazing images from your text descriptions.
+          </Text>
 
           <View style={styles.textcontainer}>
             <Text style={styles.label}>Enter your Prompt</Text>
@@ -157,20 +175,24 @@ export default function TextToImage() {
             </View>
           )}
 
-          {loading && <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />}
+          {loading && (
+            <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />
+          )}
 
           {imageUrl && (
             <>
-              <View style={styles.imageWrapper}>
-                <Text style={styles.imageLabel}>Result</Text>
-                <Image source={{ uri: imageUrl }} style={styles.generatedImage} />
+              <View style={globalStyles.imageWrapper}>
+                <Text style={globalStyles.imageLabel}>Result</Text>
+                <Image source={{ uri: imageUrl }} style={globalStyles.uploadedImage} />
               </View>
 
               <View style={styles.buttonContainer}>
                 {downloading ? (
                   <View style={{ marginTop: 10 }}>
                     <ActivityIndicator size="large" color="#ffffff" />
-                    <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                    <Text style={{ color: "#fff", marginTop: 8 }}>
+                      Saving to Downloads...
+                    </Text>
                   </View>
                 ) : (
                   <Btn title="Download Image" onPress={downloadImage} />
@@ -185,71 +207,31 @@ export default function TextToImage() {
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(70, 71, 77, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContentContainer: {
-    backgroundColor: "rgba(255,255,255,0.05)",
-    padding: 20,
-    borderRadius: 25,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: '#222',
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    zIndex: 10,
-  },
-  closeButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  gif: {
-    width: 260,
-    height: 260,
-    borderRadius: 20,
-  },
-  buttonContainer: {
-    alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 10
-  },
   container: {
     flex: 1,
     padding: 20,
   },
+  buttonContainer: {
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 10,
+  },
   textcontainer: {
     padding: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: 10,
-    marginBottom: 10
+    marginBottom: 10,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 10,
-    color: "white"
+    color: "white",
   },
   subtitle: {
     fontSize: 16,
     marginBottom: 15,
-    color: "#dadce0"
+    color: "#dadce0",
   },
   label: {
     fontWeight: "bold",
@@ -259,36 +241,10 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: "rgba(255, 255, 255, 0.2)",
     padding: 10,
-    backgroundColor: 'rgba(231, 230, 236, 0.57)',
+    backgroundColor: "rgba(231, 230, 236, 0.57)",
     borderRadius: 5,
-    marginBottom: 10,
-  },
-  generatedImage: {
-    width: 200,
-    height: 200,
-    marginBottom: 30,
-    borderRadius: 10,
-    resizeMode: "contain",
-  },
-  imageWrapper: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20,
-    padding: 20,
-    marginVertical: 20,
-    alignItems: "center",
-    alignSelf: 'center',
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    width: '85%',
-  },
-  imageLabel: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#ffffff",
     marginBottom: 10,
   },
 });

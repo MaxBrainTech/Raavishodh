@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+} from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { auth } from '../services/Firebase';
 import LinearGradient from 'react-native-linear-gradient';
@@ -10,28 +17,60 @@ import {
   signInWithCredential,
   sendPasswordResetEmail,
   updateProfile,
+  onAuthStateChanged,
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Import AlertModal
+import AlertModal from '../component/modals/AlertModal';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [alertModal, setAlertModal] = useState({ visible: false, message: '' });
   const route = useRoute();
   const { redirectTo } = route.params || {};
 
+  const showAlert = (msg) => setAlertModal({ visible: true, message: msg });
+  const hideAlert = () => setAlertModal({ visible: false, message: '' });
+
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId:"282300022667-cbrqnv08k30j5bglc4pfjchesop925fk.apps.googleusercontent.com",
+      webClientId:
+        '282300022667-cbrqnv08k30j5bglc4pfjchesop925fk.apps.googleusercontent.com',
       offlineAccess: true,
     });
+
+    // Check if already logged in
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        await AsyncStorage.setItem('isLoggedIn', 'true');
+        if (redirectTo) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: redirectTo, params: { resumeAction: true } }],
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'HomeTab' }],
+          });
+        }
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   const handleLogin = async () => {
-      if (!email.trim() || !password.trim()) {
-    Alert.alert('Missing Fields', 'Please enter both email and password.');
-    return;
-  }
+    if (!email.trim() || !password.trim()) {
+      showAlert('Please enter both email and password.');
+      return;
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -40,19 +79,25 @@ export default function LoginScreen({ navigation }) {
         await updateProfile(user, {});
       }
 
-      Alert.alert('Login Success', `Welcome, ${user.displayName || 'User'}!`);
-      setUser(user);
       await AsyncStorage.setItem('isLoggedIn', 'true');
+      showAlert(`Welcome, ${user.displayName || 'User'}!`);
 
+      // Navigate after small delay so alert is visible
       setTimeout(() => {
         if (redirectTo) {
-          navigation.navigate(redirectTo, { resumeAction: true });
+          navigation.reset({
+            index: 0,
+            routes: [{ name: redirectTo, params: { resumeAction: true } }],
+          });
         } else {
-          navigation.navigate('HomeTab');
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'HomeTab' }],
+          });
         }
-      }, 100);
+      }, 800);
     } catch (error) {
-      Alert.alert('Login Error', error.message || 'Something went wrong.');
+      showAlert(error.message || 'Something went wrong during login.');
       console.error('Email/Password Login Error:', error);
     }
   };
@@ -65,50 +110,69 @@ export default function LoginScreen({ navigation }) {
       const signInResult = await GoogleSignin.signIn();
       const idToken = signInResult.idToken || signInResult?.data?.idToken;
 
-      if (!idToken) {
-        throw new Error('No ID token found');
-      }
+      if (!idToken) throw new Error('No ID token found');
 
       const googleCredential = GoogleAuthProvider.credential(idToken);
       const userCredential = await signInWithCredential(auth, googleCredential);
       const user = userCredential.user;
 
-      Alert.alert('Login Success', `Welcome, ${user.displayName || 'User'}!`);
-      setUser(user);
       await AsyncStorage.setItem('isLoggedIn', 'true');
+      showAlert(`Welcome, ${user.displayName || 'User'}!`);
 
       setTimeout(() => {
         if (redirectTo) {
-          navigation.navigate(redirectTo, { resumeAction: true });
+          navigation.reset({
+            index: 0,
+            routes: [{ name: redirectTo, params: { resumeAction: true } }],
+          });
         } else {
-          navigation.navigate('HomeTab');
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'HomeTab' }],
+          });
         }
-      }, 100);
+      }, 800);
     } catch (error) {
-      Alert.alert('Google Sign-In Error', error.message || 'Something went wrong.');
+      showAlert(error.message || 'Google Sign-In failed.');
       console.error('Google Sign-In error:', error);
     }
   };
 
   const handleForgotPassword = () => {
     if (!email) {
-      Alert.alert('Input Required', 'Please enter your email to reset password.');
+      showAlert('Please enter your email to reset password.');
       return;
     }
 
     sendPasswordResetEmail(auth, email)
       .then(() => {
-        Alert.alert('Reset Email Sent', 'Check your inbox to reset your password.');
+        showAlert('Reset Email Sent. Check your inbox.');
       })
       .catch((error) => {
-        const message = error?.message || 'Something went wrong';
-        Alert.alert('Error', message);
+        showAlert(error?.message || 'Something went wrong while sending reset email.');
         console.error('Reset Password Error:', error);
       });
   };
 
+  if (loading) {
+    return (
+      <LinearGradient colors={['#0d1117', '#8ec5fc']} style={styles.gradient}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#fff" />
+        </View>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient colors={['#0d1117', '#8ec5fc']} style={styles.gradient}>
+      {/* Alert Modal */}
+      <AlertModal
+        visible={alertModal.visible}
+        message={alertModal.message}
+        onClose={hideAlert}
+      />
+
       <View style={styles.container}>
         <Text style={styles.title}>Sign In</Text>
 
@@ -196,5 +260,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: 20,
     textDecorationLine: 'underline',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

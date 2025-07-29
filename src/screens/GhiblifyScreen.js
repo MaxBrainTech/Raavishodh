@@ -1,9 +1,15 @@
 import React, { useState } from "react";
 import {
-  View, Text, Image, ActivityIndicator, Alert, StyleSheet, ScrollView, Modal,
-  TouchableOpacity, Platform,
+  View,
+  Text,
+  Image,
+  ActivityIndicator,
+  StyleSheet,
+  ScrollView,
+  Modal,
+  TouchableOpacity,
 } from "react-native";
-import FastImage from 'react-native-fast-image';
+import FastImage from "react-native-fast-image";
 import { launchCamera, launchImageLibrary } from "react-native-image-picker";
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
@@ -12,41 +18,66 @@ import RNFS from "react-native-fs";
 import { downloadImageFile } from "../utils/downloadImage";
 import useUsageGuard from "../hook/useUsageGuard";
 import { REPLICATE_API_TOKEN } from "@env";
+import { checkFileSize } from "../utils/fileUtils";
+import globalStyles from "../styles/globalStyles";
+
+// Import modals separately
+import LoaderModal from "../component/modals/LoaderModal";
+import AlertModal from "../component/modals/AlertModal";
+import PickerModal from "../component/modals/PickerModal";
 
 const tutorialSteps = [
   {
     title: "Upload Your Image",
     description:
       "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
-  }
+  },
 ];
 
-export default function GhiblifyScreen({ navigation }) {
+export default function GhiblifyScreen() {
   const [showTutorial, setShowTutorial] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [processing, setProcessing] = useState(false);
   const [ghibliImage, setGhibliImage] = useState(null);
   const [isModalVisible, setModalVisible] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
+  // Modals state
+  const [loader, setLoader] = useState({ visible: false, message: "" });
+  const [alertModal, setAlertModal] = useState({ visible: false, message: "" });
+  const [pickerVisible, setPickerVisible] = useState(false);
 
-  const {
-    usageCount,
-    incrementUsage,
-    checkUsage,
-  } = useUsageGuard("ghibli_usage_count");
+  const showAlert = (msg) => setAlertModal({ visible: true, message: msg });
+  const hideAlert = () => setAlertModal({ visible: false, message: "" });
 
- 
-  const openImagePicker = () => {
-    Alert.alert("Choose an Option", "Select an option to upload an image.", [
-      { text: "Camera", onPress: openCamera },
-      { text: "Gallery", onPress: openGallery },
-      { text: "Cancel", style: "cancel" },
-    ]);
+  const { incrementUsage, checkUsage } = useUsageGuard("ai_usage_count");
+
+
+  /** Open image picker modal */
+  const openImagePicker = () => setPickerVisible(true);
+
+  /** Validate file size and set image */
+  const handleImageSelected = async (uri) => {
+    setLoader({ visible: true, message: "Checking image size..." });
+
+    const { valid, message } = await checkFileSize(uri, 10);
+
+    setLoader({ visible: false, message: "" });
+
+    if (!valid) {
+      showAlert(message);
+      return;
+    }
+
+    setSelectedImage(uri);
+    setGhibliImage(null);
+    setShowTutorial(false);
   };
 
+  /** Camera */
   const openCamera = async () => {
-    if (!checkUsage()) return;
+    setPickerVisible(false);
+    const allowed = await checkUsage();
+    if (!allowed) return;
     launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
         handleImageSelected(response.assets[0].uri);
@@ -54,8 +85,11 @@ export default function GhiblifyScreen({ navigation }) {
     });
   };
 
+  /** Gallery */
   const openGallery = async () => {
-    if (!checkUsage()) return;
+    setPickerVisible(false);
+    const allowed = await checkUsage();
+    if (!allowed) return;
     launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
       if (!response.didCancel && response.assets?.length > 0) {
         handleImageSelected(response.assets[0].uri);
@@ -63,27 +97,25 @@ export default function GhiblifyScreen({ navigation }) {
     });
   };
 
-  const handleImageSelected = (uri) => {
-    setSelectedImage(uri);
-    setGhibliImage(null);
-    setShowTutorial(false);
-  };
-
+  /** Process image with Replicate API */
   const processGhiblifyImage = async () => {
     if (!selectedImage) {
-      Alert.alert("Error", "Please select an image.");
+      showAlert("Please select an image first!");
       return;
     }
-    if (!checkUsage()) return;
+    const allowed = await checkUsage();
+    if (!allowed) return;
 
-    setProcessing(true);
+    setLoader({ visible: true, message: "Processing..." });
+
     try {
       const base64Image = await RNFS.readFile(selectedImage, "base64");
 
       const response = await axios.post(
         "https://api.replicate.com/v1/predictions",
         {
-          version: "b4014c6ade5c1ac4c0d90ee5ea26ee9cf56ad28ee8a705737a0be6cdfdc3ac2a",
+          version:
+            "b4014c6ade5c1ac4c0d90ee5ea26ee9cf56ad28ee8a705737a0be6cdfdc3ac2a",
           input: {
             image: `data:image/jpeg;base64,${base64Image}`,
             model: "dev",
@@ -112,7 +144,10 @@ export default function GhiblifyScreen({ navigation }) {
       let prediction = response.data;
       if (prediction?.error) throw new Error(prediction.error);
 
-      while (prediction.status === "starting" || prediction.status === "processing") {
+      while (
+        prediction.status === "starting" ||
+        prediction.status === "processing"
+      ) {
         await new Promise((resolve) => setTimeout(resolve, 3000));
         const checkResponse = await axios.get(
           `https://api.replicate.com/v1/predictions/${prediction.id}`,
@@ -122,113 +157,137 @@ export default function GhiblifyScreen({ navigation }) {
       }
 
       if (prediction.status === "succeeded") {
-        setGhibliImage(Array.isArray(prediction.output) ? prediction.output[0] : prediction.output);
-        await incrementUsage();
+        setGhibliImage(
+          Array.isArray(prediction.output) ? prediction.output[0] : prediction.output
+        );
+        incrementUsage();
       } else {
         throw new Error("Processing failed.");
       }
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to process image.");
+      showAlert(err.message || "Failed to process image.");
     } finally {
-      setProcessing(false);
+      setLoader({ visible: false, message: "" });
     }
   };
 
+  /** Download image */
   const handleDownload = async () => {
     if (!ghibliImage) return;
     try {
       setDownloading(true);
       await downloadImageFile(ghibliImage, "ghibli");
     } catch (err) {
-      console.error("Download failed", err);
+      showAlert("Download failed. Please try again.");
     } finally {
       setDownloading(false);
     }
   };
 
-
   return (
-    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={globalStyles.gradient}>
+      <ScrollView contentContainerStyle={globalStyles.scrollContainer}>
+        {/* Loader */}
+        <LoaderModal visible={loader.visible} message={loader.message} />
+
+        {/* Alert */}
+        <AlertModal
+          visible={alertModal.visible}
+          message={alertModal.message}
+          onClose={hideAlert}
+        />
+
+        {/* Picker */}
+        <PickerModal
+          visible={pickerVisible}
+          onCamera={openCamera}
+          onGallery={openGallery}
+          onClose={() => setPickerVisible(false)}
+        />
+
+        {/* Info Modal (GIF) */}
         <Modal
           animationType="slide"
           transparent={true}
           visible={isModalVisible}
           onRequestClose={() => setModalVisible(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContentContainer}>
-              <TouchableOpacity style={styles.closeButton}
-                onPress={() => setModalVisible(false)}>
-                <Text style={styles.closeButtonText}>X</Text>
+          <View style={globalStyles.modalOverlay}>
+            <View style={globalStyles.modalContentContainer}>
+              <TouchableOpacity
+                style={globalStyles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={globalStyles.closeButtonText}>X</Text>
               </TouchableOpacity>
 
               <FastImage
                 source={require("../../assets/gif/Ghibli.png")}
-                style={styles.gif}
+                style={globalStyles.gif}
                 resizeMode={FastImage.resizeMode.contain}
               />
             </View>
           </View>
         </Modal>
-        <View style={styles.container}>
+
+        <View style={globalStyles.container}>
           <Text style={styles.title}>Ghiblify Your Image</Text>
           <Text style={styles.subtitle}>
             Transform your photos into stunning Ghibli-style artwork with AI.
           </Text>
 
+          {/* Tutorial */}
           {!selectedImage && showTutorial && (
-            <View style={styles.tutorialContainer}>
-              <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
-              <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
+            <View style={globalStyles.tutorialContainer}>
+              <Text style={globalStyles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+              <Text style={globalStyles.tutorialText}>
+                {tutorialSteps[0].description}
+              </Text>
             </View>
           )}
 
+          {/* Upload */}
           {!selectedImage ? (
-            <Btn
-              title="Upload Image" onPress={openImagePicker}>
-            </Btn>
-
+            <Btn title="Upload Image" onPress={openImagePicker} />
           ) : (
             <>
               {selectedImage && (
-                <View style={styles.imageWrapper}>
-                  <Text style={styles.imageLabel}>Selected Image</Text>
-                  <Image source={{ uri: selectedImage }} style={styles.uploadedImage}
+                <View style={globalStyles.imageWrapper}>
+                  <Text style={globalStyles.imageLabel}>Selected Image</Text>
+                  <Image
+                    source={{ uri: selectedImage }}
+                    style={globalStyles.uploadedImage}
                   />
                 </View>
               )}
               {!ghibliImage && (
-                <Btn
-                  title="Generate Image"
-                  onPress={processGhiblifyImage}
-                />
+                <Btn title="Ghiblify Image" onPress={processGhiblifyImage} />
               )}
             </>
           )}
 
-          {processing && (
-            <View style={styles.processingContainer}>
-              <ActivityIndicator size="large" color="#ffffff" />
-              <Text style={styles.processingText}>Processing...</Text>
-            </View>
-          )}
-
+          {/* Result */}
           {ghibliImage && (
-           <View style={styles.imageWrapper}>
-                            <Text style={styles.imageLabel}>Result</Text>
-              <Image source={{ uri: ghibliImage }} style={styles.generatedImage} />
+            <View style={globalStyles.imageWrapper}>
+              <Text style={globalStyles.imageLabel}>Result</Text>
+              <Image
+                source={{ uri: ghibliImage }}
+                style={globalStyles.uploadedImage}
+                onLoadStart={() =>
+                  setLoader({ visible: true, message: "Loading result..." })
+                }
+                onLoadEnd={() => setLoader({ visible: false, message: "" })}
+              />
 
               {downloading ? (
                 <View style={{ marginTop: 10 }}>
                   <ActivityIndicator size="large" color="#ffffff" />
-                  <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                  <Text style={{ color: "#fff", marginTop: 8 }}>
+                    Saving to Downloads...
+                  </Text>
                 </View>
               ) : (
-                <Btn
-                  title="Download Image"
-                  onPress={handleDownload}
-                />
+                <Btn title="Download Image" onPress={handleDownload} />
               )}
             </View>
           )}
@@ -238,166 +297,12 @@ export default function GhiblifyScreen({ navigation }) {
   );
 }
 
-
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-    alignItems: "center",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(70, 71, 77, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContentContainer: {
-    backgroundColor: "rgba(255,255,255,0.05)",
-    padding: 20,
-    borderRadius: 25,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: '#222',
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  closeButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  gif: {
-    width: 260,
-    height: 260,
-    borderRadius: 20,
-  },
-   imageWrapper: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20,
-    padding: 20,
-    marginVertical: 20,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    width: '85%',
-  },
-   imageLabel: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#ffffff",
-    marginBottom: 10,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
+  title: { color: "#fff", fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   subtitle: {
     color: "#fff",
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 20,
-  },
-  button: {
-    flexDirection: "row",
-    backgroundColor: "#6a11cb",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    alignItems: "center",
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-    marginRight: 8,
-  },
-  tutorialContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-
-
-  },
-  tutorialTitle: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  tutorialText: {
-    color: "#d1d5db",
-    fontSize: 14,
-    textAlign: 'left',
-    lineHeight: 20,
-  },
-  uploadedImage: {
-    width: 250,
-    height: 250,
-    borderRadius: 10,
-    resizeMode: "contain",
-    marginBottom: 20,
-  },
-  tutorialStep: {
-    backgroundColor: "#fff",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    width: "90%",
-  },
-  tutorialDescription: {
-    fontSize: 14,
-    color: "black",
-    textAlign: "left",
-  },
-  processingText: {
-    marginTop: 10,
-    color: "#ffffff"
-  },
-  generatedImage: {
-    width: 250,
-    height: 250,
-    borderRadius: 10,
-    marginTop: 20,
-    marginBottom: 20,
-    resizeMode: "contain",
-  },
-  processingContainer: {
-    alignItems: "center",
-    marginTop: 10
   },
 });

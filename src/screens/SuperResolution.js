@@ -1,86 +1,74 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  View, Text, Image, StyleSheet,
-  FlatList, ActivityIndicator, Alert, Modal, TouchableOpacity
+  View,
+  Text,
+  Image,
+  ActivityIndicator,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
 } from "react-native";
-import { launchImageLibrary, launchCamera } from "react-native-image-picker";
-import FastImage from 'react-native-fast-image';
+import FastImage from "react-native-fast-image";
 import LinearGradient from "react-native-linear-gradient";
 import FeatureLayout from "../component/FeatureLayout";
 import RNFS from "react-native-fs";
-import { REPLICATE_API_TOKEN } from '@env';
+import { REPLICATE_API_TOKEN } from "@env";
 import Btn from "../component/Btn";
-import { useNavigation } from "@react-navigation/native";
 import { downloadImageFile } from "../utils/downloadImage";
-import useUsageGuard from "../hook/useUsageGuard";
+import useImageHandler from "../hook/useImageHandler";
+import globalStyles from "../styles/globalStyles";
+
+// Modals
+import LoaderModal from "../component/modals/LoaderModal";
+import AlertModal from "../component/modals/AlertModal";
+import PickerModal from "../component/modals/PickerModal";
+
+const tutorialSteps = [
+  {
+    title: "Upload Your Image",
+    description:
+      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+  },
+];
 
 export default function SuperResolution() {
+  const {
+    selectedImage,
+    setSelectedImage,
+    error,
+    pickFromCamera,
+    pickFromGallery,
+    incrementUsage,
+  } = useImageHandler("ai_usage_count");
+
   const [showTutorial, setShowTutorial] = useState(true);
-  const [image, setImage] = useState(null);
-  const [processing, setProcessing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [enhancedImage, setEnhancedImage] = useState(null);
   const [isModalVisible, setModalVisible] = useState(true);
-  const [processedImage, setProcessedImage] = useState(null);
-  const [downloading, setDownloading] = useState(false);
-  const navigation = useNavigation();
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [alertModal, setAlertModal] = useState({ visible: false, message: "" });
 
-  const tutorialSteps = [
-    {
-      title: "Upload Your Image",
-      description:
-        "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
-    }
-  ];
+  // Unified loader like Ghibli / Face Enhancement
+  const [loader, setLoader] = useState({ visible: false, message: "" });
 
+  const showAlert = (msg) => setAlertModal({ visible: true, message: msg });
+  const hideAlert = () => setAlertModal({ visible: false, message: "" });
 
-  const {
-    usageCount,
-    incrementUsage,
-    checkUsage,
-  } = useUsageGuard("superResolution_usage_count");
+  useEffect(() => {
+    if (error) showAlert(error);
+  }, [error]);
 
-
-  const openImagePicker = () => {
-    Alert.alert("Choose an Option", "Select an option to upload an image.", [
-      { text: "Camera", onPress: openCamera },
-      { text: "Gallery", onPress: openGallery },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
-
-  const openCamera = async () => {
-    if (!checkUsage()) return;
-    launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
-      if (!response.didCancel && response.assets?.length > 0) {
-        handleImageSelected(response.assets[0].uri);
-      }
-    });
-  };
-
-  const openGallery = async () => {
-    if (!checkUsage()) return;
-    launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
-      if (!response.didCancel && response.assets?.length > 0) {
-        handleImageSelected(response.assets[0].uri);
-      }
-    });
-  };
-
-  const handleImageSelected = (uri) => {
-    setImage(uri);
-    setEnhancedImage(null);
-    setShowTutorial(false);
-  };
-
-
+  /** Process Image with Replicate API */
   const processImage = async () => {
-    if (!image) return Alert.alert("Error", "No image selected!");
+    if (!selectedImage) {
+      showAlert("Please select an image first!");
+      return;
+    }
 
-    setProcessing(true);
-    setEnhancedImage(null);
-
+    setLoader({ visible: true, message: "Processing..." });
     try {
-      const base64Image = await RNFS.readFile(image, "base64");
+      const base64Image = await RNFS.readFile(selectedImage, "base64");
 
       const response = await fetch("https://api.replicate.com/v1/predictions", {
         method: "POST",
@@ -89,7 +77,8 @@ export default function SuperResolution() {
           Authorization: `Token ${REPLICATE_API_TOKEN}`,
         },
         body: JSON.stringify({
-          version: "f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa", // face enhancement model
+          version:
+            "f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa", // Super-resolution model
           input: {
             image: `data:image/jpeg;base64,${base64Image}`,
             scale: 2,
@@ -106,9 +95,7 @@ export default function SuperResolution() {
         await new Promise((resolve) => setTimeout(resolve, 3000));
         const checkResponse = await fetch(
           `https://api.replicate.com/v1/predictions/${prediction.id}`,
-          {
-            headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` },
-          }
+          { headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` } }
         );
         prediction = await checkResponse.json();
       }
@@ -116,131 +103,151 @@ export default function SuperResolution() {
       if (prediction.status === "succeeded") {
         setEnhancedImage(prediction.output);
         incrementUsage();
-      }
-
-      else {
-        throw new Error(`Failed with status: ${prediction.status}`);
+      } else {
+     throw new Error("Processing failed. Please try again or try uploading a lower-quality image.");
       }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to enhance image");
-      console.error("Enhancement Error:", error);
+      showAlert(
+        error.message ||
+          "Processing failed. Please try again or try uploading a lower-quality image."
+      );
     } finally {
-      setProcessing(false);
+      setLoader({ visible: false, message: "" });
     }
   };
 
+  /** Download Result */
   const downloadImage = async () => {
     if (!enhancedImage) return;
     try {
       setDownloading(true);
       await downloadImageFile(enhancedImage, "resoluted");
     } catch (err) {
-      console.error("Download failed", err);
+      showAlert(err.message || "Could not download the image.");
     } finally {
       setDownloading(false);
     }
   };
 
-
   return (
-    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContentContainer}>
-            <TouchableOpacity style={styles.closeButton}
-              onPress={() => setModalVisible(false)}>
-              <Text style={styles.closeButtonText}>X</Text>
-            </TouchableOpacity>
+    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={globalStyles.gradient}>
+      {/* Loader Modal - unified */}
+      <LoaderModal visible={loader.visible} message={loader.message} />
 
-            <FastImage
-              source={require("../../assets/gif/superResolution.png")}
-              style={styles.gif}
-              resizeMode={FastImage.resizeMode.contain}
-            />
-          </View>
-        </View>
-      </Modal>
-      <FlatList
-        data={[]}
-        keyExtractor={(_, index) => index.toString()}
-        ListHeaderComponent={
-          <View style={styles.container}>
-            <FeatureLayout
-              title="AI Super Resolution"
-              description="Enhance facial features using our advanced AI technology."
-            />
+      {/* Alert Modal */}
+      <AlertModal
+        visible={alertModal.visible}
+        message={alertModal.message}
+        onClose={hideAlert}
+      />
 
-            {!image && showTutorial && (
-              <View style={styles.tutorialContainer}>
-                <Text style={styles.tutorialTitle}>{tutorialSteps[0].title}</Text>
-                <Text style={styles.tutorialText}>{tutorialSteps[0].description}</Text>
-              </View>
-            )}
+      {/* Picker Modal */}
+      <PickerModal
+        visible={pickerVisible}
+        onCamera={() => {
+          setPickerVisible(false);
+          pickFromCamera();
+        }}
+        onGallery={() => {
+          setPickerVisible(false);
+          pickFromGallery();
+        }}
+        onClose={() => setPickerVisible(false)}
+      />
 
-            {!image && <Btn title="Upload Image" onPress={openImagePicker} />}
+      <ScrollView contentContainerStyle={globalStyles.scrollContainer}>
+        <View style={globalStyles.container}>
+          {/* Info Modal (GIF) */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isModalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContentContainer}>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.closeButtonText}>X</Text>
+                </TouchableOpacity>
 
-            {image && (
-              <View style={styles.imageWrapper}>
-                <Text style={styles.imageLabel}>Selected Image</Text>
-                <Image source={{ uri: image }} style={styles.uploadedImage} />
-              </View>
-            )}
-
-            {image && !enhancedImage && (
-              <View style={styles.button}>
-                <Btn
-                  title="Resolute Image"
-                  onPress={processImage}
-                  disabled={processing}
+                <FastImage
+                  source={require("../../assets/gif/superResolution.png")}
+                  style={styles.gif}
+                  resizeMode={FastImage.resizeMode.contain}
                 />
               </View>
-            )}
+            </View>
+          </Modal>
 
-            {processing && <ActivityIndicator size="large" color="#fff" style={styles.loader} />}
+          <FeatureLayout
+            title="AI Super Resolution"
+            description="Enhance facial features using our advanced AI technology."
+            operationId="super-resolution"
+          />
 
-            {enhancedImage && (
-              <View style={styles.imageWrapper}>
-                <Text style={styles.imageLabel}>Result</Text>
-                <Image source={{ uri: enhancedImage  }} style={styles.uploadedImage} />
-                {downloading ? (
-                  <View style={{ marginTop: 10 }}>
-                    <ActivityIndicator size="large" color="#ffffff" />
-                    <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
-                  </View>
-                ) : (
-                  <Btn
-                    title="Download Image"
-                    onPress={downloadImage}
-                  />
-                )}
-              </View>
-            )}
-          </View>
-        }
-      />
+          {/* Tutorial */}
+          {!selectedImage && showTutorial && (
+            <View style={globalStyles.tutorialContainer}>
+              <Text style={globalStyles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+              <Text style={globalStyles.tutorialText}>
+                {tutorialSteps[0].description}
+              </Text>
+            </View>
+          )}
+
+          {/* Upload Button */}
+          {!selectedImage && (
+            <Btn title="Upload Image" onPress={() => setPickerVisible(true)} />
+          )}
+
+          {/* Selected Image */}
+          {selectedImage && (
+            <View style={styles.imageWrapper}>
+              <Text style={styles.imageLabel}>Selected Image</Text>
+              <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
+            </View>
+          )}
+
+          {/* Generate Button */}
+          {selectedImage && !enhancedImage && (
+            <Btn title="Resolute Image" onPress={processImage} />
+          )}
+
+          {/* Result */}
+          {enhancedImage && (
+            <View style={styles.imageWrapper}>
+              <Text style={styles.imageLabel}>Result</Text>
+              <Image source={{ uri: enhancedImage }} style={styles.uploadedImage}
+               onLoadStart={() => setLoader({ visible: true, message: "Loading result..." })}
+      onLoadEnd={() => setLoader({ visible: false, message: "" })} />
+
+              {downloading ? (
+                <View style={{ marginTop: 10 }}>
+                  <ActivityIndicator size="large" color="#ffffff" />
+                  <Text style={{ color: "#fff", marginTop: 8 }}>
+                    Saving to Downloads...
+                  </Text>
+                </View>
+              ) : (
+                <Btn title="Download Image" onPress={downloadImage} />
+              )}
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    padding: 10,
-    alignItems: "center",
-  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(70, 71, 77, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(70, 71, 77, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContentContainer: {
     backgroundColor: "rgba(255,255,255,0.05)",
@@ -251,101 +258,36 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.2)",
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     right: 10,
-    backgroundColor: '#222',
+    backgroundColor: "#222",
     borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 5,
     zIndex: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 5,
   },
-  closeButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  gif: {
-    width: 260,
-    height: 260,
-    borderRadius: 20,
-  },
-  tutorialContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  tutorialTitle: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  tutorialText: {
-    color: "#d1d5db",
-    fontSize: 14,
-    textAlign: 'left',
-    lineHeight: 20,
-  },
-  image: {
-    width: 200,
-    height: 200,
-    marginTop: 10,
+  closeButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  gif: { width: 250, height: 250, borderRadius: 20 },
+  uploadedImage: {
+    width: 250,
+    height: 250,
     borderRadius: 10,
+    resizeMode: "contain",
     marginBottom: 20,
-    alignSelf: "center",
-    resizeMode: 'contain'
-  },
-  loader: {
-    marginTop: 10,
-  },
-  resultText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 5,
-    alignSelf: 'center'
-  },
-  button: {
-    marginVertical: 10,
   },
   imageWrapper: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
     borderRadius: 20,
     padding: 20,
     marginVertical: 20,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    width: '85%',
+    width: "85%",
   },
   imageLabel: {
     fontSize: 20,
     fontWeight: "600",
     color: "#ffffff",
     marginBottom: 10,
-  },
-  uploadedImage: {
-    width: 200,
-    height: 200,
-    marginTop: 0,
-    marginBottom: 30,
-    borderRadius: 10,
-    resizeMode: "contain",
   },
 });

@@ -2,7 +2,7 @@ import { Alert } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import useDailyUsage from "./useDailyUsage";
 
-export default function useUsageGuard(storageKey, limitLoggedIn = 3, limitGuest = 1) {
+export default function useUsageGuard(storageKey, limitLoggedIn = 11, limitGuest = 1) {
   const navigation = useNavigation();
   const route = useRoute();
 
