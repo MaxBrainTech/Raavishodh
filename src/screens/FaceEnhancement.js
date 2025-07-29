@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
-  View, StyleSheet, Image, Alert, Platform, ActivityIndicator, Text,
-  Modal, FlatList, TouchableOpacity, KeyboardAvoidingView,
+  View, StyleSheet, Image, Platform, Text,
+  Modal, FlatList, TouchableOpacity, KeyboardAvoidingView, ActivityIndicator
 } from "react-native";
 import FastImage from 'react-native-fast-image';
 import { useNavigation } from '@react-navigation/native';
@@ -15,20 +15,87 @@ import Btn from "../component/Btn";
 import useUsageGuard from "../hook/useUsageGuard";
 import { downloadImageFile } from '../utils/downloadImage';
 
+/** Premium Loader Modal **/
+const LoaderModal = ({ visible, message }) => {
+  if (!visible) return null;
+  return (
+    <Modal transparent animationType="fade">
+      <View style={styles.loaderOverlay}>
+        <View style={styles.loaderBox}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loaderText}>{message}</Text>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+/** Premium Alert Modal **/
+const AlertModal = ({ visible, message, onClose }) => {
+  if (!visible) return null;
+  return (
+    <Modal transparent animationType="fade">
+      <View style={styles.loaderOverlay}>
+        <View style={styles.alertBox}>
+          <Text style={styles.alertText}>{message}</Text>
+          <TouchableOpacity style={styles.alertButton} onPress={onClose}>
+            <Text style={styles.alertButtonText}>OK</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+/** Dark Picker Modal (Camera/Gallery) **/
+const PickerModal = ({ visible, onCamera, onGallery, onClose }) => {
+  if (!visible) return null;
+  return (
+    <Modal transparent animationType="fade">
+      <View style={styles.loaderOverlay}>
+        <View style={styles.alertBox}>
+          <Text style={[styles.alertText, { marginBottom: 20 }]}>
+            Select an option to upload an image
+          </Text>
+          <View style={{ flexDirection: "row", gap: 20 }}>
+            <TouchableOpacity style={styles.alertButton} onPress={onCamera}>
+              <Text style={styles.alertButtonText}>Camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.alertButton} onPress={onGallery}>
+              <Text style={styles.alertButtonText}>Gallery</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={[styles.alertButton, { marginTop: 15, backgroundColor: "#444" }]} onPress={onClose}>
+            <Text style={[styles.alertButtonText, { color: "#fff" }]}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export default function FaceEnhancement() {
   const [showTutorial, setShowTutorial] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [enhancedImage, setEnhancedImage] = useState(null);
-  const [processing, setProcessing] = useState(false);
   const [isModalVisible, setModalVisible] = useState(true);
   const [readyToGenerate, setReadyToGenerate] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
+  // Unified loader state
+  const [loader, setLoader] = useState({ visible: false, message: "" });
+
+  // Unified alert state
+  const [alertModal, setAlertModal] = useState({ visible: false, message: "" });
+  const showAlert = (msg) => setAlertModal({ visible: true, message: msg });
+  const hideAlert = () => setAlertModal({ visible: false, message: "" });
+
+  // Picker modal
+  const [pickerVisible, setPickerVisible] = useState(false);
+
   const navigation = useNavigation();
 
-
   const {
-    usageCount,
     incrementUsage,
     checkUsage,
   } = useUsageGuard("ghibli_usage_count");
@@ -52,21 +119,34 @@ export default function FaceEnhancement() {
   };
 
   const openImagePicker = () => {
-    Alert.alert("Choose an Option", "Select an option to upload an image.", [
-      { text: "Camera", onPress: openCamera },
-      { text: "Gallery", onPress: openGallery },
-      { text: "Cancel", style: "cancel" },
-    ]);
+    setPickerVisible(true);
   };
 
-  const handleImageSelected = (uri) => {
-    setSelectedImage(uri);
-    setEnhancedImage(null);
-    setReadyToGenerate(true);
-  };
+  const handleImageSelected = async (uri) => {
+    try {
+      setLoader({ visible: true, message: "Checking image size..." });
 
+      const fileStats = await RNFS.stat(uri);
+      const fileSizeMB = fileStats.size / (1024 * 1024);
+
+      setLoader({ visible: false, message: "" });
+
+      if (fileSizeMB >= 10) {
+        showAlert("Image size exceeds 10 MB. Please upload a smaller image.");
+        return;
+      }
+
+      setSelectedImage(uri);
+      setEnhancedImage(null);
+      setReadyToGenerate(true);
+    } catch (err) {
+      setLoader({ visible: false, message: "" });
+      showAlert("Could not check file size. Please try again.");
+    }
+  };
 
   const openCamera = async () => {
+    setPickerVisible(false);
     await requestPermissions();
     const allowed = await checkUsage();
     if (!allowed) return;
@@ -79,6 +159,7 @@ export default function FaceEnhancement() {
   };
 
   const openGallery = async () => {
+    setPickerVisible(false);
     await requestPermissions();
     const allowed = await checkUsage();
     if (!allowed) return;
@@ -91,15 +172,13 @@ export default function FaceEnhancement() {
   };
 
   const processImage = async (imageUri) => {
-    if (!imageUri) return Alert.alert("Error", "No image selected!");
+    if (!imageUri) return showAlert("No image selected!");
 
-    setProcessing(true);
+    setLoader({ visible: true, message: "Enhancing image..." });
     setEnhancedImage(null);
 
     try {
-       console.log("Selected URI:", imageUri);
       const base64Image = await RNFS.readFile(imageUri, "base64");
-console.log("Base64 size:", base64Image.length);
 
       const response = await fetch("https://api.replicate.com/v1/predictions", {
         method: "POST",
@@ -118,7 +197,6 @@ console.log("Base64 size:", base64Image.length);
       });
 
       let prediction = await response.json();
-       console.log("Initial Prediction:", prediction);
 
       if (prediction?.error) throw new Error(prediction.error);
 
@@ -134,49 +212,64 @@ console.log("Base64 size:", base64Image.length);
           }
         );
         prediction = await pollRes.json();
-         console.log("Polling result:", prediction);
       }
 
       if (prediction.status === "succeeded") {
-        console.log("Prediction output:", prediction.output);
         setEnhancedImage(prediction.output);
         incrementUsage();
       } else {
-         console.error("Prediction failed:", prediction);
-        throw new Error("Image enhancement failed: " + prediction.error || prediction.status);
+        if (prediction.error?.includes("cog: got error trying to upload output files")) {
+          showAlert("This image seems already enhanced. Try another one.");
+        } else {
+          showAlert("Image enhancement failed. Please try again.");
+        }
       }
     } catch (err) {
-       console.error("Process Error:", err);
-      Alert.alert("Error", err.message || "Failed to enhance image");
-      console.error(err);
+      showAlert(err.message || "Failed to enhance image");
     } finally {
-      setProcessing(false);
+      setLoader({ visible: false, message: "" });
     }
   };
 
   const downloadImage = async () => {
     if (!enhancedImage) return;
-
     try {
       setDownloading(true);
       await downloadImageFile(enhancedImage, "enhanced");
     } catch (err) {
-      console.error("Download failed", err);
+      showAlert("Download failed. Please try again.");
     } finally {
       setDownloading(false);
     }
   };
 
-
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={styles.gradient}>
       <KeyboardAvoidingView style={styles.container} behavior="padding">
+        {/* Loader */}
+        <LoaderModal visible={loader.visible} message={loader.message} />
+
+        {/* Alerts */}
+        <AlertModal
+          visible={alertModal.visible}
+          message={alertModal.message}
+          onClose={hideAlert}
+        />
+
+        {/* Picker */}
+        <PickerModal
+          visible={pickerVisible}
+          onCamera={openCamera}
+          onGallery={openGallery}
+          onClose={() => setPickerVisible(false)}
+        />
+
         <FlatList
           data={[{}]}
           keyExtractor={(_, index) => index.toString()}
           renderItem={() => (
             <View style={{ alignItems: "center", justifyContent: "center" }}>
-
+              {/* Tutorial GIF Modal */}
               <Modal
                 animationType="slide"
                 transparent={true}
@@ -198,6 +291,7 @@ console.log("Base64 size:", base64Image.length);
                   </View>
                 </View>
               </Modal>
+
               <FeatureLayout
                 title="AI Face Enhancement"
                 description="Enhance facial features using our advanced AI technology."
@@ -217,9 +311,35 @@ console.log("Base64 size:", base64Image.length);
                   <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
                 </View>
               )}
-              {selectedImage && !processing && readyToGenerate && (
+
+              {selectedImage && !readyToGenerate && enhancedImage && (
+                <View style={styles.imageWrapper}>
+                  <Text style={styles.imageLabel}>Result</Text>
+                  <Image
+                    source={{ uri: enhancedImage }}
+                    style={styles.uploadedImage}
+                    onLoadStart={() =>
+                      setLoader({ visible: true, message: "Loading result..." })
+                    }
+                    onLoadEnd={() =>
+                      setLoader({ visible: false, message: "" })
+                    }
+                  />
+
+                  {downloading ? (
+                    <View style={{ marginTop: 10 }}>
+                      <ActivityIndicator size="large" color="#ffffff" />
+                      <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
+                    </View>
+                  ) : (
+                    <Btn title="Download Image" onPress={downloadImage} />
+                  )}
+                </View>
+              )}
+
+              {selectedImage && !enhancedImage && readyToGenerate && (
                 <Btn
-                  title="Generate"
+                  title="Enhance"
                   onPress={() => {
                     setReadyToGenerate(false);
                     processImage(selectedImage);
@@ -227,33 +347,7 @@ console.log("Base64 size:", base64Image.length);
                 />
               )}
 
-              {processing && (
-                <View style={styles.processingContainer}>
-                  <ActivityIndicator size="large" color="#ffffff" />
-                  <Text style={styles.processingText}>Processing...</Text>
-                </View>
-              )}
-
-              {enhancedImage && (
-                <View style={styles.imageWrapper}>
-                  <Text style={styles.imageLabel}>Result</Text>
-                  <Image source={{ uri: enhancedImage }} style={styles.uploadedImage} />
-                  {downloading ? (
-                    <View style={{ marginTop: 10 }}>
-                      <ActivityIndicator size="large" color="#ffffff" />
-                      <Text style={{ color: '#fff', marginTop: 8 }}>Saving to Downloads...</Text>
-                    </View>
-                  ) : (
-                    <Btn
-                      title="Download Image"
-                      onPress={downloadImage}
-                    />
-                  )}
-
-                </View>
-              )}
-
-              {!selectedImage && !processing && (
+              {!selectedImage && (
                 <Btn
                   title="Upload Image"
                   onPress={openImagePicker}
@@ -303,7 +397,6 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     lineHeight: 20,
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(70, 71, 77, 0.85)',
@@ -368,14 +461,44 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     resizeMode: "contain",
   },
-  processingContainer: {
-    marginVertical: 10,
+  loaderOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  loaderBox: {
+    backgroundColor: "#1f2937",
+    padding: 20,
+    borderRadius: 16,
     alignItems: "center",
   },
-  processingText: {
+  loaderText: {
+    color: "#fff",
+    marginTop: 10,
+    fontSize: 16,
+  },
+  alertBox: {
+    backgroundColor: "#1f2937",
+    padding: 25,
+    borderRadius: 20,
+    width: "75%",
+    alignItems: "center",
+  },
+  alertText: {
     color: "#fff",
     fontSize: 16,
-    fontStyle: "italic",
-    marginTop: 10,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  alertButton: {
+    backgroundColor: "#8ec5fc",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  alertButtonText: {
+    color: "#000",
+    fontWeight: "600",
   },
 });
