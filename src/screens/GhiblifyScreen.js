@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -8,29 +8,28 @@ import {
   ScrollView,
   Modal,
   TouchableOpacity,
-} from "react-native";
-import FastImage from "react-native-fast-image";
-import { launchCamera, launchImageLibrary } from "react-native-image-picker";
-import LinearGradient from "react-native-linear-gradient";
-import Btn from "../component/Btn";
-import axios from "axios";
-import RNFS from "react-native-fs";
-import { downloadImageFile } from "../utils/downloadImage";
-import useUsageGuard from "../hook/useUsageGuard";
-import { REPLICATE_API_TOKEN } from "@env";
-import { checkFileSize } from "../utils/fileUtils";
-import globalStyles from "../styles/globalStyles";
+} from 'react-native';
+import FastImage from 'react-native-fast-image';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
+import LinearGradient from 'react-native-linear-gradient';
+import Btn from '../component/Btn';
+import axios from 'axios';
+import RNFS from 'react-native-fs';
+import useDownload from '../utils/useDownload';
+import useUsageGuard from '../hook/useUsageGuard';
+import {REPLICATE_API_TOKEN} from '@env';
+import {checkFileSize} from '../utils/fileUtils';
+import globalStyles from '../styles/globalStyles';
 
-// Import modals separately
-import LoaderModal from "../component/modals/LoaderModal";
-import AlertModal from "../component/modals/AlertModal";
-import PickerModal from "../component/modals/PickerModal";
+import LoaderModal from '../component/modals/LoaderModal';
+import AlertModal from '../component/modals/AlertModal';
+import PickerModal from '../component/modals/PickerModal';
 
 const tutorialSteps = [
   {
-    title: "Upload Your Image",
+    title: 'Upload Your Image',
     description:
-      "• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.",
+      '• Click the button below to select an image.\n• Max file size: 10MB.\n• Supported formats: JPEG, PNG, WebP.',
   },
 ];
 
@@ -41,27 +40,23 @@ export default function GhiblifyScreen() {
   const [isModalVisible, setModalVisible] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
-  // Modals state
-  const [loader, setLoader] = useState({ visible: false, message: "" });
-  const [alertModal, setAlertModal] = useState({ visible: false, message: "" });
+  const [loader, setLoader] = useState({visible: false, message: ''});
+  const [alertModal, setAlertModal] = useState({visible: false, message: ''});
   const [pickerVisible, setPickerVisible] = useState(false);
+  const showAlert = msg => setAlertModal({visible: true, message: msg});
+  const hideAlert = () => setAlertModal({visible: false, message: ''});
 
-  const showAlert = (msg) => setAlertModal({ visible: true, message: msg });
-  const hideAlert = () => setAlertModal({ visible: false, message: "" });
+  const {incrementUsage, checkUsage} = useUsageGuard('ai_usage_count');
+  const {handleDownload} = useDownload(showAlert, setLoader);
 
-  const { incrementUsage, checkUsage } = useUsageGuard("ai_usage_count");
-
-
-  /** Open image picker modal */
   const openImagePicker = () => setPickerVisible(true);
 
-  /** Validate file size and set image */
-  const handleImageSelected = async (uri) => {
-    setLoader({ visible: true, message: "Checking image size..." });
+  const handleImageSelected = async uri => {
+    setLoader({visible: true, message: 'Checking image size...'});
 
-    const { valid, message } = await checkFileSize(uri, 10);
+    const {valid, message} = await checkFileSize(uri, 10);
 
-    setLoader({ visible: false, message: "" });
+    setLoader({visible: false, message: ''});
 
     if (!valid) {
       showAlert(message);
@@ -73,59 +68,56 @@ export default function GhiblifyScreen() {
     setShowTutorial(false);
   };
 
-  /** Camera */
   const openCamera = async () => {
     setPickerVisible(false);
     const allowed = await checkUsage();
     if (!allowed) return;
-    launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
+    launchCamera({mediaType: 'photo', quality: 1}, response => {
       if (!response.didCancel && response.assets?.length > 0) {
         handleImageSelected(response.assets[0].uri);
       }
     });
   };
 
-  /** Gallery */
   const openGallery = async () => {
     setPickerVisible(false);
     const allowed = await checkUsage();
     if (!allowed) return;
-    launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
+    launchImageLibrary({mediaType: 'photo', quality: 1}, response => {
       if (!response.didCancel && response.assets?.length > 0) {
         handleImageSelected(response.assets[0].uri);
       }
     });
   };
 
-  /** Process image with Replicate API */
   const processGhiblifyImage = async () => {
     if (!selectedImage) {
-      showAlert("Please select an image first!");
+      showAlert('Please select an image first!');
       return;
     }
     const allowed = await checkUsage();
     if (!allowed) return;
 
-    setLoader({ visible: true, message: "Processing..." });
+    setLoader({visible: true, message: 'Processing...'});
 
     try {
-      const base64Image = await RNFS.readFile(selectedImage, "base64");
+      const base64Image = await RNFS.readFile(selectedImage, 'base64');
 
       const response = await axios.post(
-        "https://api.replicate.com/v1/predictions",
+        'https://api.replicate.com/v1/predictions',
         {
           version:
-            "b4014c6ade5c1ac4c0d90ee5ea26ee9cf56ad28ee8a705737a0be6cdfdc3ac2a",
+            'b4014c6ade5c1ac4c0d90ee5ea26ee9cf56ad28ee8a705737a0be6cdfdc3ac2a',
           input: {
             image: `data:image/jpeg;base64,${base64Image}`,
-            model: "dev",
-            prompt: "recreate this image in the style of Ghibli",
+            model: 'dev',
+            prompt: 'recreate this image in the style of Ghibli',
             go_fast: false,
             lora_scale: 0.95,
-            megapixels: "1",
+            megapixels: '1',
             num_outputs: 1,
-            aspect_ratio: "1:1",
-            output_format: "jpg",
+            aspect_ratio: '1:1',
+            output_format: 'jpg',
             guidance_scale: 3.5,
             output_quality: 100,
             prompt_strength: 0.65,
@@ -136,68 +128,57 @@ export default function GhiblifyScreen() {
         {
           headers: {
             Authorization: `Token ${REPLICATE_API_TOKEN}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
-        }
+        },
       );
 
       let prediction = response.data;
       if (prediction?.error) throw new Error(prediction.error);
 
       while (
-        prediction.status === "starting" ||
-        prediction.status === "processing"
+        prediction.status === 'starting' ||
+        prediction.status === 'processing'
       ) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         const checkResponse = await axios.get(
           `https://api.replicate.com/v1/predictions/${prediction.id}`,
-          { headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` } }
+          {headers: {Authorization: `Token ${REPLICATE_API_TOKEN}`}},
         );
         prediction = checkResponse.data;
       }
 
-      if (prediction.status === "succeeded") {
+      if (prediction.status === 'succeeded') {
         setGhibliImage(
-          Array.isArray(prediction.output) ? prediction.output[0] : prediction.output
+          Array.isArray(prediction.output)
+            ? prediction.output[0]
+            : prediction.output,
         );
         incrementUsage();
       } else {
-        throw new Error("Processing failed.");
+        throw new Error('Processing failed.');
       }
     } catch (err) {
-      showAlert(err.message || "Failed to process image.");
+      showAlert('Something went wrong while processing. Please try again.');
     } finally {
-      setLoader({ visible: false, message: "" });
-    }
-  };
-
-  /** Download image */
-  const handleDownload = async () => {
-    if (!ghibliImage) return;
-    try {
-      setDownloading(true);
-      await downloadImageFile(ghibliImage, "ghibli");
-    } catch (err) {
-      showAlert("Download failed. Please try again.");
-    } finally {
-      setDownloading(false);
+      setLoader({visible: false, message: ''});
     }
   };
 
   return (
-    <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={globalStyles.gradient}>
+    <LinearGradient
+      colors={['#0d1117', '#8ec5fc']}
+      style={globalStyles.gradient}>
       <ScrollView contentContainerStyle={globalStyles.scrollContainer}>
-        {/* Loader */}
+      
         <LoaderModal visible={loader.visible} message={loader.message} />
 
-        {/* Alert */}
         <AlertModal
           visible={alertModal.visible}
           message={alertModal.message}
           onClose={hideAlert}
         />
 
-        {/* Picker */}
         <PickerModal
           visible={pickerVisible}
           onCamera={openCamera}
@@ -205,24 +186,21 @@ export default function GhiblifyScreen() {
           onClose={() => setPickerVisible(false)}
         />
 
-        {/* Info Modal (GIF) */}
         <Modal
           animationType="slide"
           transparent={true}
           visible={isModalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
+          onRequestClose={() => setModalVisible(false)}>
           <View style={globalStyles.modalOverlay}>
             <View style={globalStyles.modalContentContainer}>
               <TouchableOpacity
                 style={globalStyles.closeButton}
-                onPress={() => setModalVisible(false)}
-              >
+                onPress={() => setModalVisible(false)}>
                 <Text style={globalStyles.closeButtonText}>X</Text>
               </TouchableOpacity>
 
               <FastImage
-                source={require("../../assets/gif/Ghibli.png")}
+                source={require('../../assets/gif/Ghibli.png')}
                 style={globalStyles.gif}
                 resizeMode={FastImage.resizeMode.contain}
               />
@@ -236,17 +214,17 @@ export default function GhiblifyScreen() {
             Transform your photos into stunning Ghibli-style artwork with AI.
           </Text>
 
-          {/* Tutorial */}
           {!selectedImage && showTutorial && (
             <View style={globalStyles.tutorialContainer}>
-              <Text style={globalStyles.tutorialTitle}>{tutorialSteps[0].title}</Text>
+              <Text style={globalStyles.tutorialTitle}>
+                {tutorialSteps[0].title}
+              </Text>
               <Text style={globalStyles.tutorialText}>
                 {tutorialSteps[0].description}
               </Text>
             </View>
           )}
 
-          {/* Upload */}
           {!selectedImage ? (
             <Btn title="Upload Image" onPress={openImagePicker} />
           ) : (
@@ -255,7 +233,7 @@ export default function GhiblifyScreen() {
                 <View style={globalStyles.imageWrapper}>
                   <Text style={globalStyles.imageLabel}>Selected Image</Text>
                   <Image
-                    source={{ uri: selectedImage }}
+                    source={{uri: selectedImage}}
                     style={globalStyles.uploadedImage}
                   />
                 </View>
@@ -266,28 +244,30 @@ export default function GhiblifyScreen() {
             </>
           )}
 
-          {/* Result */}
           {ghibliImage && (
             <View style={globalStyles.imageWrapper}>
               <Text style={globalStyles.imageLabel}>Result</Text>
               <Image
-                source={{ uri: ghibliImage }}
+                source={{uri: ghibliImage}}
                 style={globalStyles.uploadedImage}
                 onLoadStart={() =>
-                  setLoader({ visible: true, message: "Loading result..." })
+                  setLoader({visible: true, message: 'Loading result...'})
                 }
-                onLoadEnd={() => setLoader({ visible: false, message: "" })}
+                onLoadEnd={() => setLoader({visible: false, message: ''})}
               />
 
               {downloading ? (
-                <View style={{ marginTop: 10 }}>
+                <View style={{marginTop: 10}}>
                   <ActivityIndicator size="large" color="#ffffff" />
-                  <Text style={{ color: "#fff", marginTop: 8 }}>
+                  <Text style={{color: '#fff', marginTop: 8}}>
                     Saving to Downloads...
                   </Text>
                 </View>
               ) : (
-                <Btn title="Download Image" onPress={handleDownload} />
+                <Btn
+                  title="Download Image"
+                  onPress={() => handleDownload(ghibliImage, 'ghibli')}
+                />
               )}
             </View>
           )}
@@ -298,11 +278,11 @@ export default function GhiblifyScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { color: "#fff", fontSize: 24, fontWeight: "bold", marginBottom: 20 },
+  title: {color: '#fff', fontSize: 24, fontWeight: 'bold', marginBottom: 20},
   subtitle: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 16,
-    textAlign: "center",
+    textAlign: 'center',
     marginBottom: 20,
   },
 });

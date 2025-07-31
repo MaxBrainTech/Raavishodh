@@ -7,11 +7,7 @@ export default function useUsageGuard(storageKey, limitLoggedIn = 3, limitGuest 
   const route = useRoute();
 
   const {
-    usageCount,
-    incrementUsage,
-    isLoggedIn,
-    limit,
-  } = useDailyUsage(storageKey, limitLoggedIn, limitGuest);
+    usageCount,incrementUsage, isLoggedIn,limit, } = useDailyUsage(storageKey, limitLoggedIn, limitGuest);
 
   const checkUsage = () => {
     if (!isLoggedIn && usageCount >= limitGuest) {

@@ -10,7 +10,6 @@ export default function useDailyUsage(baseKey, limitLoggedIn, limitGuest) {
   const email = user?.email || "guest";
   const today = new Date().toISOString().split("T")[0];
 
-  // ✅ Correct key construction
   const usageKey = `${baseKey}_${email}`;
   const lastUsedKey = `${usageKey}LastUsed`;
 

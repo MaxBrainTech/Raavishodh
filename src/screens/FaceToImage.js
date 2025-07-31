@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   Image,
   TextInput,
-  ActivityIndicator,
-  FlatList,
   StyleSheet,
   Modal,
   TouchableOpacity,
+  KeyboardAvoidingView,
   ScrollView,
+  Platform,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import FeatureLayout from "../component/FeatureLayout";
@@ -18,11 +18,11 @@ import axios from "axios";
 import { REPLICATE_API_TOKEN } from "@env";
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
-import { downloadImageFile } from "../utils/downloadImage";
-import useImageHandler from "../hook/useImageHandler";
+import useDownload from "../utils/useDownload";
+import useUsageGuard from "../hook/useUsageGuard";
+import { checkFileSize } from "../utils/fileUtils";
 import globalStyles from "../styles/globalStyles";
 
-// Import separate modal components
 import LoaderModal from "../component/modals/LoaderModal";
 import AlertModal from "../component/modals/AlertModal";
 import PickerModal from "../component/modals/PickerModal";
@@ -36,41 +36,71 @@ const tutorialSteps = [
 ];
 
 export default function FaceToImage() {
-  const {
-    selectedImage,
-    setSelectedImage,
-    loading,
-    error,
-    pickFromCamera,
-    pickFromGallery,
-    incrementUsage,
-  } = useImageHandler("ai_usage_count");
-
-  const [showTutorial, setShowTutorial] = useState(true);
-  const [downloading, setDownloading] = useState(false);
-  const [prompt, setPrompt] = useState("");
-  const [processing, setProcessing] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [enhancedImage, setEnhancedImage] = useState(null);
-  const [isModalVisible, setModalVisible] = useState(true);
-  const [pickerVisible, setPickerVisible] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const [loader, setLoader] = useState({ visible: false, message: "" });
   const [alertModal, setAlertModal] = useState({ visible: false, message: "" });
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [isModalVisible, setModalVisible] = useState(true);
 
   const showAlert = (msg) => setAlertModal({ visible: true, message: msg });
   const hideAlert = () => setAlertModal({ visible: false, message: "" });
 
-  // Show alert if hook returns error
-  useEffect(() => {
-    if (error) showAlert(error);
-  }, [error]);
+  const { handleDownload } = useDownload(showAlert, setLoader);
+  const { incrementUsage, checkUsage } = useUsageGuard("ai_usage_count");
 
-  /** Process image with Replicate API */
+  // Handle image selection and size check
+  const handleImageSelected = async (uri) => {
+    setLoader({ visible: true, message: "Checking image size..." });
+
+    const { valid, message } = await checkFileSize(uri, 10);
+    setLoader({ visible: false, message: "" });
+
+    if (!valid) {
+      showAlert(message);
+      return;
+    }
+
+    setSelectedImage(uri);
+    setEnhancedImage(null);
+  };
+
+  const openCamera = async () => {
+    setPickerVisible(false);
+    const allowed = await checkUsage();
+    if (!allowed) return;
+
+    const { launchCamera } = require("react-native-image-picker");
+    launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
+      if (!response.didCancel && response.assets?.length > 0) {
+        handleImageSelected(response.assets[0].uri);
+      }
+    });
+  };
+
+  const openGallery = async () => {
+    setPickerVisible(false);
+    const allowed = await checkUsage();
+    if (!allowed) return;
+
+    const { launchImageLibrary } = require("react-native-image-picker");
+    launchImageLibrary({ mediaType: "photo", quality: 1 }, (response) => {
+      if (!response.didCancel && response.assets?.length > 0) {
+        handleImageSelected(response.assets[0].uri);
+      }
+    });
+  };
+
+  // Process image with Replicate API
   const processImage = async () => {
     if (!selectedImage) {
       showAlert("Please select an image first!");
       return;
     }
 
-    setProcessing(true);
+    setLoader({ visible: true, message: "Processing image..." });
+
     try {
       const base64Image = await RNFS.readFile(selectedImage, "base64");
 
@@ -122,7 +152,7 @@ export default function FaceToImage() {
       if (prediction.status === "succeeded") {
         if (Array.isArray(prediction.output) && prediction.output.length > 0) {
           setEnhancedImage(prediction.output);
-          incrementUsage(); // mark usage after success
+          incrementUsage();
         } else {
           throw new Error("Invalid API response format");
         }
@@ -132,83 +162,65 @@ export default function FaceToImage() {
     } catch (error) {
       showAlert(error.message || "Image processing failed");
     }
-    setProcessing(false);
-  };
 
-  /** Download result */
-  const downloadImage = async (url) => {
-    if (!url) return;
-    try {
-      setDownloading(true);
-      await downloadImageFile(url, "face2image");
-    } catch (err) {
-      showAlert(err.message || "Could not download the image.");
-    } finally {
-      setDownloading(false);
-    }
+    setLoader({ visible: false, message: "" });
   };
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={globalStyles.gradient}>
-      {/* Loader Modal */}
-      <LoaderModal visible={loading} message="Checking image size..." />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={{ alignItems: "center", paddingBottom: 20 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Loader & Alert Modals */}
+          <LoaderModal visible={loader.visible} message={loader.message} />
+          <AlertModal visible={alertModal.visible} message={alertModal.message} onClose={hideAlert} />
 
-      {/* Alert Modal */}
-      <AlertModal
-        visible={alertModal.visible}
-        message={alertModal.message}
-        onClose={hideAlert}
-      />
+          {/* Picker Modal */}
+          <PickerModal
+            visible={pickerVisible}
+            onCamera={openCamera}
+            onGallery={openGallery}
+            onClose={() => setPickerVisible(false)}
+          />
 
-      {/* Picker Modal */}
-      <PickerModal
-        visible={pickerVisible}
-        onCamera={() => {
-          setPickerVisible(false);
-          pickFromCamera();
-        }}
-        onGallery={() => {
-          setPickerVisible(false);
-          pickFromGallery();
-        }}
-        onClose={() => setPickerVisible(false)}
-      />
+          {/* Info Modal */}
+          {isModalVisible && (
+            <Modal animationType="slide" transparent visible={isModalVisible}>
+              <View style={globalStyles.modalOverlay}>
+                <View style={globalStyles.modalContentContainer}>
+                  <TouchableOpacity
+                    style={globalStyles.closeButton}
+                    onPress={() => setModalVisible(false)}
+                  >
+                    <Text style={globalStyles.closeButtonText}>X</Text>
+                  </TouchableOpacity>
 
-      <ScrollView contentContainerStyle={globalStyles.scrollContainer}>
-        <View style={globalStyles.container}>
-          {/* Info Modal (GIF) */}
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={isModalVisible}
-            onRequestClose={() => setModalVisible(false)}
-          >
-            <View style={globalStyles.modalOverlay}>
-              <View style={globalStyles.modalContentContainer}>
-                <TouchableOpacity
-                  style={globalStyles.closeButton}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={globalStyles.closeButtonText}>X</Text>
-                </TouchableOpacity>
-
-                <FastImage
-                  source={require("../../assets/gif/FacetoImage.gif")}
-                  style={globalStyles.gif}
-                  resizeMode={FastImage.resizeMode.contain}
-                />
+                  <FastImage
+                    source={require("../../assets/gif/FacetoImage.gif")}
+                    style={globalStyles.gif}
+                    resizeMode={FastImage.resizeMode.contain}
+                  />
+                </View>
               </View>
-            </View>
-          </Modal>
+            </Modal>
+          )}
 
+          {/* Feature Header */}
           <FeatureLayout
             title="Face To Make Image"
             description="Make Realistic Images Of People Instantly."
-            operationId="face-enhancement"
+            operationId="face-to-image"
           />
 
           {/* Tutorial */}
-          {!selectedImage && showTutorial && (
+          {!selectedImage && (
             <View style={globalStyles.tutorialContainer}>
               <Text style={globalStyles.tutorialTitle}>{tutorialSteps[0].title}</Text>
               <Text style={globalStyles.tutorialText}>
@@ -218,9 +230,7 @@ export default function FaceToImage() {
           )}
 
           {/* Upload Button */}
-          {!selectedImage && (
-            <Btn title="Upload Image" onPress={() => setPickerVisible(true)} />
-          )}
+          {!selectedImage && <Btn title="Upload Image" onPress={() => setPickerVisible(true)} />}
 
           {/* Selected Image */}
           {selectedImage && (
@@ -230,76 +240,45 @@ export default function FaceToImage() {
             </View>
           )}
 
-          {/* Prompt */}
+          {/* Prompt Input */}
           {selectedImage && (
-            <>
-              <View style={styles.promptContainer}>
-                <Text style={styles.promptLabel}>Enter a Prompt:</Text>
-                <TextInput
-                  style={styles.promptInput}
-                  placeholder="Describe the enhancement..."
-                  placeholderTextColor="#aaa"
-                  value={prompt}
-                  onChangeText={setPrompt}
-                />
-              </View>
-
-              {prompt.trim() && !processing && !enhancedImage && (
-                <Btn title="Generate" onPress={processImage} />
-              )}
-
-              {/* Processing */}
-              {processing && (
-                <View style={styles.processingContainer}>
-                  <ActivityIndicator size="large" color="#ffffff" />
-                  <Text style={styles.processingText}>Processing...</Text>
-                </View>
-              )}
-
-              {/* Result */}
-              {enhancedImage && Array.isArray(enhancedImage) && (
-                <FlatList
-                  data={enhancedImage}
-                  keyExtractor={(_, index) => index.toString()}
-                  renderItem={({ item }) => (
-                    <View style={globalStyles.imageWrapper}>
-                      <Text style={globalStyles.imageLabel}>Result</Text>
-                      <Image source={{ uri: item }} style={globalStyles.uploadedImage} />
-                      {downloading ? (
-                        <View style={{ marginTop: 10 }}>
-                          <ActivityIndicator size="large" color="#ffffff" />
-                          <Text style={{ color: "#fff", marginTop: 8 }}>
-                            Saving to Downloads...
-                          </Text>
-                        </View>
-                      ) : (
-                        <Btn
-                          title="Download Image"
-                          onPress={() => downloadImage(item)}
-                        />
-                      )}
-                    </View>
-                  )}
-                  scrollEnabled={false}
-                />
-              )}
-            </>
+            <View style={styles.promptContainer}>
+              <Text style={styles.promptLabel}>Enter a Prompt:</Text>
+              <TextInput
+                style={styles.promptInput}
+                placeholder="Describe the enhancement..."
+                placeholderTextColor="#aaa"
+                value={prompt}
+                onChangeText={setPrompt}
+                // blurOnSubmit={false}
+                returnKeyType="done"
+              />
+            </View>
           )}
-        </View>
-      </ScrollView>
+
+          {/* Generate Button */}
+          {selectedImage && prompt.trim() && !enhancedImage && (
+            <Btn title="Generate" onPress={() => processImage()} />
+          )}
+
+          {/* Enhanced Result */}
+          {enhancedImage && Array.isArray(enhancedImage) && (
+            enhancedImage.map((item, index) => (
+              <View key={index} style={globalStyles.imageWrapper}>
+                <Text style={globalStyles.imageLabel}>Result</Text>
+                <Image source={{ uri: item }} style={globalStyles.uploadedImage} />
+                <Btn title="Download Image" onPress={() => handleDownload(item, "faceToImage")} />
+              </View>
+            ))
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  uploadedImage: {
-    width: 250,
-    height: 250,
-    borderRadius: 10,
-    resizeMode: "contain",
-    marginBottom: 20,
-  },
-  promptContainer: { width: "100%", marginVertical: 10 , paddingHorizontal: 15 },
+  promptContainer: { width: "100%", marginVertical: 10, paddingHorizontal: 15 },
   promptLabel: { color: "#fff", marginBottom: 5 },
   promptInput: {
     backgroundColor: "#fff",
@@ -307,6 +286,4 @@ const styles = StyleSheet.create({
     padding: 10,
     color: "#000",
   },
-  processingText: { marginTop: 10, color: "#ffffff" },
-  processingContainer: { marginTop: 20, alignItems: "center" },
 });

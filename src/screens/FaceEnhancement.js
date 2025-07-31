@@ -21,7 +21,7 @@ import { REPLICATE_API_TOKEN } from "@env";
 import LinearGradient from "react-native-linear-gradient";
 import Btn from "../component/Btn";
 import useUsageGuard from "../hook/useUsageGuard";
-import { downloadImageFile } from "../utils/downloadImage";
+import useDownload from "../utils/useDownload";
 import { checkFileSize } from "../utils/fileUtils";
 import globalStyles from "../styles/globalStyles";
 import LoaderModal from "../component/modals/LoaderModal";
@@ -41,13 +41,12 @@ export default function FaceEnhancement() {
   const [isModalVisible, setModalVisible] = useState(true);
    const navigation = useNavigation();
   const { incrementUsage, checkUsage } = useUsageGuard("ai_usage_count");
+const { handleDownload } = useDownload(showAlert, setLoader);
 
-  const requestPermissions = async () => {
+const requestPermissions = async () => {
     if (Platform.OS === "android") {
       await request(PERMISSIONS.ANDROID.CAMERA);
-      await request(PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE);
     } else {
-      await request(PERMISSIONS.IOS.PHOTO_LIBRARY);
       await request(PERMISSIONS.IOS.CAMERA);
     }
   };
@@ -144,17 +143,6 @@ export default function FaceEnhancement() {
     }
   };
 
-  const downloadImage = async () => {
-    if (!enhancedImage) return;
-    try {
-      setDownloading(true);
-      await downloadImageFile(enhancedImage, "enhanced");
-    } catch (err) {
-      showAlert("Download failed. Please try again.");
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={globalStyles.gradient}>
@@ -233,7 +221,7 @@ export default function FaceEnhancement() {
                       <Text style={{ color: "#fff", marginTop: 8 }}>Saving to Downloads...</Text>
                     </View>
                   ) : (
-                    <Btn title="Download Image" onPress={downloadImage} />
+                    <Btn title="Download Image" onPress={() => handleDownload(enhancedImage, "enhanced")} />
                   )}
                 </View>
               )}

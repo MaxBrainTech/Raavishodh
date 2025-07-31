@@ -15,11 +15,10 @@ import FeatureLayout from "../component/FeatureLayout";
 import RNFS from "react-native-fs";
 import { REPLICATE_API_TOKEN } from "@env";
 import Btn from "../component/Btn";
-import { downloadImageFile } from "../utils/downloadImage";
+import useDownload from "../utils/useDownload";
 import useImageHandler from "../hook/useImageHandler";
 import globalStyles from "../styles/globalStyles";
 
-// Modals
 import LoaderModal from "../component/modals/LoaderModal";
 import AlertModal from "../component/modals/AlertModal";
 import PickerModal from "../component/modals/PickerModal";
@@ -49,17 +48,17 @@ export default function SuperResolution() {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [alertModal, setAlertModal] = useState({ visible: false, message: "" });
 
-  // Unified loader like Ghibli / Face Enhancement
   const [loader, setLoader] = useState({ visible: false, message: "" });
 
   const showAlert = (msg) => setAlertModal({ visible: true, message: msg });
   const hideAlert = () => setAlertModal({ visible: false, message: "" });
 
+  const { handleDownload } = useDownload(showAlert, setLoader);
+
   useEffect(() => {
     if (error) showAlert(error);
   }, [error]);
 
-  /** Process Image with Replicate API */
   const processImage = async () => {
     if (!selectedImage) {
       showAlert("Please select an image first!");
@@ -116,32 +115,17 @@ export default function SuperResolution() {
     }
   };
 
-  /** Download Result */
-  const downloadImage = async () => {
-    if (!enhancedImage) return;
-    try {
-      setDownloading(true);
-      await downloadImageFile(enhancedImage, "resoluted");
-    } catch (err) {
-      showAlert(err.message || "Could not download the image.");
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={globalStyles.gradient}>
-      {/* Loader Modal - unified */}
+     
       <LoaderModal visible={loader.visible} message={loader.message} />
-
-      {/* Alert Modal */}
+     
       <AlertModal
         visible={alertModal.visible}
         message={alertModal.message}
         onClose={hideAlert}
       />
 
-      {/* Picker Modal */}
       <PickerModal
         visible={pickerVisible}
         onCamera={() => {
@@ -157,7 +141,7 @@ export default function SuperResolution() {
 
       <ScrollView contentContainerStyle={globalStyles.scrollContainer}>
         <View style={globalStyles.container}>
-          {/* Info Modal (GIF) */}
+      
           <Modal
             animationType="slide"
             transparent={true}
@@ -188,7 +172,6 @@ export default function SuperResolution() {
             operationId="super-resolution"
           />
 
-          {/* Tutorial */}
           {!selectedImage && showTutorial && (
             <View style={globalStyles.tutorialContainer}>
               <Text style={globalStyles.tutorialTitle}>{tutorialSteps[0].title}</Text>
@@ -198,12 +181,10 @@ export default function SuperResolution() {
             </View>
           )}
 
-          {/* Upload Button */}
           {!selectedImage && (
             <Btn title="Upload Image" onPress={() => setPickerVisible(true)} />
           )}
 
-          {/* Selected Image */}
           {selectedImage && (
             <View style={styles.imageWrapper}>
               <Text style={styles.imageLabel}>Selected Image</Text>
@@ -211,12 +192,10 @@ export default function SuperResolution() {
             </View>
           )}
 
-          {/* Generate Button */}
           {selectedImage && !enhancedImage && (
             <Btn title="Resolute Image" onPress={processImage} />
           )}
 
-          {/* Result */}
           {enhancedImage && (
             <View style={styles.imageWrapper}>
               <Text style={styles.imageLabel}>Result</Text>
@@ -224,16 +203,8 @@ export default function SuperResolution() {
                onLoadStart={() => setLoader({ visible: true, message: "Loading result..." })}
       onLoadEnd={() => setLoader({ visible: false, message: "" })} />
 
-              {downloading ? (
-                <View style={{ marginTop: 10 }}>
-                  <ActivityIndicator size="large" color="#ffffff" />
-                  <Text style={{ color: "#fff", marginTop: 8 }}>
-                    Saving to Downloads...
-                  </Text>
-                </View>
-              ) : (
-                <Btn title="Download Image" onPress={downloadImage} />
-              )}
+                <Btn title="Download Image"  onPress={() => handleDownload(enhancedImage, "resoluted")} />
+           
             </View>
           )}
         </View>

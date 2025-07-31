@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Image,
   Modal,
@@ -18,8 +17,12 @@ import Slider from "@react-native-community/slider";
 import axios from "axios";
 import { REPLICATE_API_TOKEN } from "@env";
 import useUsageGuard from "../hook/useUsageGuard";
-import { downloadImageFile } from "../utils/downloadImage";
+import useDownload from "../utils/useDownload";
 import globalStyles from "../styles/globalStyles";
+
+// Modals
+import LoaderModal from "../component/modals/LoaderModal";
+import AlertModal from "../component/modals/AlertModal";
 
 export default function TextToImageDiffusion() {
   const [prompt, setPrompt] = useState("");
@@ -29,13 +32,20 @@ export default function TextToImageDiffusion() {
   const [imageUrl, setImageUrl] = useState(null);
   const [generateClicked, setGenerateClicked] = useState(false);
   const [isModalVisible, setModalVisible] = useState(true);
-  const [downloading, setDownloading] = useState(false);
+
+  // Dark Alert & Loader modals
+  const [alertModal, setAlertModal] = useState({ visible: false, message: "" });
+  const [loader, setLoader] = useState({ visible: false, message: "" });
+
+  const showAlert = (msg) => setAlertModal({ visible: true, message: msg });
+  const hideAlert = () => setAlertModal({ visible: false, message: "" });
 
   const { checkUsage, incrementUsage } = useUsageGuard("ai_usage_count");
+  const { handleDownload } = useDownload(showAlert, setLoader);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
-      Alert.alert("Error", "Please enter a prompt before generating.");
+      showAlert("Please enter a prompt before generating.");
       return;
     }
 
@@ -43,10 +53,7 @@ export default function TextToImageDiffusion() {
     if (!allowed) return;
 
     if (!REPLICATE_API_TOKEN) {
-      Alert.alert(
-        "Token Error",
-        "Replicate API token is missing or not loaded from .env"
-      );
+      showAlert("Replicate API token is missing or not loaded from .env");
       return;
     }
 
@@ -103,7 +110,7 @@ export default function TextToImageDiffusion() {
         }
       }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to generate image.");
+      showAlert(error.message || "Failed to generate image.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -111,21 +118,19 @@ export default function TextToImageDiffusion() {
     }
   };
 
-  const downloadImage = async () => {
-    if (!imageUrl) return;
-    try {
-      setDownloading(true);
-      await downloadImageFile(imageUrl, "diffusion");
-    } catch (err) {
-      console.error("Download failed", err);
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   return (
     <LinearGradient colors={["#0d1117", "#8ec5fc"]} style={globalStyles.gradient}>
       <ScrollView contentContainerStyle={globalStyles.scrollContainer}>
+        {/* Alert Modal */}
+        <AlertModal
+          visible={alertModal.visible}
+          message={alertModal.message}
+          onClose={hideAlert}
+        />
+
+        {/* Loader Modal */}
+        <LoaderModal visible={loader.visible} message={loader.message} />
+
         {/* Info Modal (GIF) */}
         <Modal
           animationType="slide"
@@ -161,11 +166,14 @@ export default function TextToImageDiffusion() {
             <TextInput
               style={styles.input}
               placeholder="Describe the image you want to generate..."
+              placeholderTextColor="#aaa"
               value={prompt}
               onChangeText={setPrompt}
             />
 
-            <Text style={styles.label}>Guidance Scale: {guidanceScale.toFixed(1)}</Text>
+            <Text style={styles.label}>
+              Guidance Scale: {guidanceScale.toFixed(1)}
+            </Text>
             <Slider
               value={guidanceScale}
               onValueChange={setGuidanceScale}
@@ -202,16 +210,10 @@ export default function TextToImageDiffusion() {
               </View>
 
               <View style={styles.buttonContainer}>
-                {downloading ? (
-                  <View style={{ marginTop: 10 }}>
-                    <ActivityIndicator size="large" color="#ffffff" />
-                    <Text style={{ color: "#fff", marginTop: 8 }}>
-                      Saving to Downloads...
-                    </Text>
-                  </View>
-                ) : (
-                  <Btn title="Download Image" onPress={downloadImage} />
-                )}
+                <Btn
+                  title="Download Image"
+                  onPress={() => handleDownload(imageUrl, "diffusion")}
+                />
               </View>
             </>
           )}
@@ -258,8 +260,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.2)",
     padding: 10,
-    backgroundColor: "rgba(231, 230, 236, 0.57)",
+     backgroundColor: 'rgba(9, 2, 43, 0.57)',
     borderRadius: 5,
     marginBottom: 10,
+    color: "#000",
   },
 });
