@@ -102,29 +102,22 @@ export default function GhiblifyScreen() {
 
     try {
       const base64Image = await RNFS.readFile(selectedImage, 'base64');
+const dataUrl = `data:image/jpeg;base64,${base64Image}`;
 
       const response = await axios.post(
         'https://api.replicate.com/v1/predictions',
         {
-          version:
-            'b4014c6ade5c1ac4c0d90ee5ea26ee9cf56ad28ee8a705737a0be6cdfdc3ac2a',
-          input: {
-            image: `data:image/jpeg;base64,${base64Image}`,
-            model: 'dev',
-            prompt: 'recreate this image in the style of Ghibli',
-            go_fast: false,
-            lora_scale: 0.95,
-            megapixels: '1',
-            num_outputs: 1,
-            aspect_ratio: '1:1',
-            output_format: 'jpg',
-            guidance_scale: 3.5,
-            output_quality: 100,
-            prompt_strength: 0.65,
-            extra_lora_scale: 1,
-            num_inference_steps: 32,
-          },
+        version: '6c4785d791d08ec65ff2ca5e9a7a0c2b0ac4e07ffadfb367231aa16bc7a52cbb',
+        input: {
+          seed: -1,
+          prompt:
+            'Ghibli Studio style, Charming hand-drawn anime-style illustration',
+          input_image: dataUrl, // IMPORTANT: use input_image here
+          lora_weight: 1,
+          guidance_scale: 3.5,
+          num_inference_steps: 25,
         },
+      },
         {
           headers: {
             Authorization: `Token ${REPLICATE_API_TOKEN}`,
@@ -156,9 +149,11 @@ export default function GhiblifyScreen() {
         );
         incrementUsage();
       } else {
-        throw new Error('Processing failed.');
+        throw new Error('Processing failed.'
+        );
       }
     } catch (err) {
+       console.error('Replicate error:', err);
       showAlert('Something went wrong while processing. Please try again.');
     } finally {
       setLoader({visible: false, message: ''});
