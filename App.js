@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StyleSheet } from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {NavigationContainer} from '@react-navigation/native';
+import {createStackNavigator} from '@react-navigation/stack';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './src/services/Firebase';
-import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {onAuthStateChanged} from 'firebase/auth';
+import {auth} from './src/services/Firebase';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import SplashScreen from './src/screens/SplashScreen';
 import HomeScreen from './src/screens/Homescreen';
@@ -28,6 +32,8 @@ import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import PhotoRestoration from './src/screens/PhotoRestoration';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
+import OCRScanner from './src/screens/OcrScanner';
+import Flux from './src/screens/Flux';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -43,12 +49,11 @@ function MyTabBarBackground() {
 }
 
 // SafeArea Wrapper for Screens
-function ScreenWrapper({ children }) {
+function ScreenWrapper({children}) {
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: '#0d1117' }}
-      edges={['top', 'left', 'right']}
-    >
+      style={{flex: 1, backgroundColor: '#0d1117'}}
+      edges={['top', 'left', 'right']}>
       {children}
     </SafeAreaView>
   );
@@ -57,11 +62,14 @@ function ScreenWrapper({ children }) {
 // Home Stack
 function HomeStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{headerShown: false}}>
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="FaceEnhancement" component={FaceEnhancement} />
       <Stack.Screen name="TextToImage" component={TextToImage} />
-      <Stack.Screen name="TextToImageDiffusion" component={TextToImageDiffusion} />
+      <Stack.Screen
+        name="TextToImageDiffusion"
+        component={TextToImageDiffusion}
+      />
       <Stack.Screen name="BackgroundRemoval" component={BackgroundRemoval} />
       <Stack.Screen name="FaceToImage" component={FaceToImage} />
       <Stack.Screen name="SuperResolution" component={SuperResolution} />
@@ -70,6 +78,8 @@ function HomeStack() {
       <Stack.Screen name="PhotoRestoration" component={PhotoRestoration} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="SignUp" component={SignupScreen} />
+      <Stack.Screen name="OCRScanner" component={OCRScanner} />
+      <Stack.Screen name="Flux" component={Flux} />
     </Stack.Navigator>
   );
 }
@@ -77,7 +87,7 @@ function HomeStack() {
 // Ghibli Stack
 function GhibliStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{headerShown: false}}>
       <Stack.Screen name="GhiblifyScreen" component={GhiblifyScreen} />
     </Stack.Navigator>
   );
@@ -86,10 +96,13 @@ function GhibliStack() {
 // Profile Stack
 function ProfileStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{headerShown: false}}>
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-      <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
+      <Stack.Screen
+        name="ChangePasswordScreen"
+        component={ChangePasswordScreen}
+      />
       <Stack.Screen name="PrivacySetting" component={PrivacySetting} />
       <Stack.Screen name="Terms" component={Terms} />
       <Stack.Screen name="Faq" component={Faq} />
@@ -105,7 +118,7 @@ function MainTabs() {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({route}) => ({
         headerShown: false,
         tabBarBackground: () => <MyTabBarBackground />,
         tabBarActiveTintColor: '#00d4ff',
@@ -117,25 +130,27 @@ function MainTabs() {
           borderTopWidth: 0,
           elevation: 0,
         },
-        tabBarIcon: ({ focused, color }) => {
+        tabBarIcon: ({focused, color}) => {
           let iconName;
-          if (route.name === 'HomeTab') iconName = focused ? 'home' : 'home-outline';
-          else if (route.name === 'GhibliTab') iconName = focused ? 'sparkles' : 'sparkles-outline';
-          else if (route.name === 'ProfileTab') iconName = focused ? 'person' : 'person-outline';
+          if (route.name === 'HomeTab')
+            iconName = focused ? 'home' : 'home-outline';
+          else if (route.name === 'GhibliTab')
+            iconName = focused ? 'sparkles' : 'sparkles-outline';
+          else if (route.name === 'ProfileTab')
+            iconName = focused ? 'person' : 'person-outline';
           return <Icon name={iconName} size={24} color={color} />;
         },
-      })}
-    >
+      })}>
       <Tab.Screen
         name="HomeTab"
         component={HomeStack}
-        options={{ title: 'Home' }}
-        listeners={({ navigation }) => ({
+        options={{title: 'Home'}}
+        listeners={({navigation}) => ({
           tabPress: e => {
             e.preventDefault();
             navigation.reset({
               index: 0,
-              routes: [{ name: 'HomeTab', state: { routes: [{ name: 'Home' }] } }],
+              routes: [{name: 'HomeTab', state: {routes: [{name: 'Home'}]}}],
             });
           },
         })}
@@ -144,13 +159,18 @@ function MainTabs() {
       <Tab.Screen
         name="GhibliTab"
         component={GhibliStack}
-        options={{ title: 'Ghibli' }}
-        listeners={({ navigation }) => ({
+        options={{title: 'Ghibli'}}
+        listeners={({navigation}) => ({
           tabPress: e => {
             e.preventDefault();
             navigation.reset({
               index: 0,
-              routes: [{ name: 'GhibliTab', state: { routes: [{ name: 'GhiblifyScreen' }] } }],
+              routes: [
+                {
+                  name: 'GhibliTab',
+                  state: {routes: [{name: 'GhiblifyScreen'}]},
+                },
+              ],
             });
           },
         })}
@@ -159,13 +179,15 @@ function MainTabs() {
       <Tab.Screen
         name="ProfileTab"
         component={ProfileStack}
-        options={{ title: 'Profile' }}
-        listeners={({ navigation }) => ({
+        options={{title: 'Profile'}}
+        listeners={({navigation}) => ({
           tabPress: e => {
             e.preventDefault();
             navigation.reset({
               index: 0,
-              routes: [{ name: 'ProfileTab', state: { routes: [{ name: 'Profile' }] } }],
+              routes: [
+                {name: 'ProfileTab', state: {routes: [{name: 'Profile'}]}},
+              ],
             });
           },
         })}
@@ -179,7 +201,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, currentUser => {
       setUser(currentUser);
       setLoading(false);
     });
@@ -191,7 +213,7 @@ export default function App() {
     <SafeAreaProvider>
       <ScreenWrapper>
         <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Navigator screenOptions={{headerShown: false}}>
             <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="MainTabs" component={MainTabs} />
           </Stack.Navigator>
