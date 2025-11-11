@@ -26,7 +26,7 @@ export default function ProfileScreen() {
 
   const [user, setUser] = useState(null);
   const [name, setName] = useState('John Doe');
-  const [email, setEmail] = useState('john.doe@example.com');
+  const [email, setEmail] = useState('User@example.com');
   const [isEditing, setIsEditing] = useState(false);
   const [avatar, setAvatar] = useState('https://i.pravatar.cc/150');
 
@@ -42,7 +42,7 @@ export default function ProfileScreen() {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        setEmail(currentUser.email || 'john.doe@example.com');
+        setEmail(currentUser.email || 'User@example.com');
         setName(currentUser.displayName || 'Guest');
 
         if (currentUser.photoURL) {
@@ -54,7 +54,7 @@ export default function ProfileScreen() {
       } else {
         setUser(null);
         setName('Guest');
-        setEmail('john.doe@example.com');
+        setEmail('User@example.com');
         setAvatar('https://i.pravatar.cc/150');
       }
     });

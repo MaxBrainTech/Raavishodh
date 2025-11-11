@@ -62,6 +62,18 @@ const features = [
     icon: "time-outline",
      image: require('../../assets/gif/PhotoRestoration.png'),
   },
+   {
+    title: "OCR Scanner",
+    screen: "OCRScanner",
+    icon: "time-outline",
+     image: require('../../assets/gif/ocr.png'),
+  },
+  //   {
+  //   title: "Flux Txt to Img",
+  //   screen: "Flux",
+  //   icon: "time-outline",
+  //    image: require('../../assets/gif/flux.jpg'),
+  // },
 ];
 
 const Homescreen = ({ navigation }) => {

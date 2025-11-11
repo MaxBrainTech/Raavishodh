@@ -112,7 +112,7 @@ const dataUrl = `data:image/jpeg;base64,${base64Image}`;
           seed: -1,
           prompt:
             'Ghibli Studio style, Charming hand-drawn anime-style illustration',
-          input_image: dataUrl, // IMPORTANT: use input_image here
+          input_image: dataUrl, 
           lora_weight: 1,
           guidance_scale: 3.5,
           num_inference_steps: 25,
